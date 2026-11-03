@@ -1,3 +1,26 @@
+# Current setup: Groq Free plan
+
+Groq is now the default provider. Stay on Groq's Free plan; do not upgrade to Developer for a free-only prototype. The app cannot inspect or enforce your account billing tier. It never switches providers automatically. Quota errors stop the request; guided buttons remain available.
+
+Create a key at https://console.groq.com/keys and put it in Render Environment, not in source code or chat:
+
+| Variable | Value |
+| --- | --- |
+| AGRIFORESIGHT_AI_PROVIDER | groq |
+| GROQ_API_KEY | Your private Groq key |
+| AGRIFORESIGHT_CHAT_MODEL | openai/gpt-oss-20b |
+| AGRIFORESIGHT_AI_ENABLED | 1 |
+
+Replace the old Gemini model setting explicitly. Keep AGRIFORESIGHT_DEMO=1 for the other demo restrictions. Push this code and save/deploy the environment settings, then use Ask for help → Test AI connection. The successful result names the provider and model. Local setup uses these same environment variable names in the PowerShell window that starts Flask; .env files are not loaded automatically.
+
+Groq's published free limits for this model were 30 requests/minute, 1,000 requests/day, 8,000 tokens/minute and 200,000 tokens/day when checked November 3, 2026. Any one limit can stop requests. Check your account for current limits: https://console.groq.com/docs/rate-limits . Billing details: https://console.groq.com/docs/billing-faqs . Shared public use consumes the same account quota.
+
+The provider interprets bounded app actions; it is not yet a general conversational agent. Confirmation is still required for saves. Only the current unrecognised message is sent, not the whole farm or journal history. Live Groq access has not been tested without a key; automated tests mock provider replies and verify routing and no cross-provider fallback.
+
+The earlier Gemini setup notes below are kept for users who explicitly choose AGRIFORESIGHT_AI_PROVIDER=gemini. The current button is named Test AI connection for either provider.
+
+---
+
 # Farm assistant
 
 The assistant opens from the **Ask for help** button at the bottom of any page. Close or Escape minimises it without losing the conversation. Farm overview is the first screen. Simulations have been removed from navigation and the public API. The older water calculation files remain in the repository as earlier work.
