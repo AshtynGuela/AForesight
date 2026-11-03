@@ -61,3 +61,18 @@ class RetryTests(unittest.TestCase):
             self.assertEqual(gemini_request().status_code,status)
             post.assert_called_once()
         sleep.assert_not_called()
+
+
+class TransportTests(unittest.TestCase):
+    @patch.dict('os.environ', {'GEMINI_API_KEY':'test-key','AGRIFORESIGHT_CHAT_MODEL':'test-model'}, clear=True)
+    @patch('assistant_chat.requests.post')
+    def test_transport_failures_are_distinct_and_do_not_leak_secrets(self, post):
+        for error, text in [(requests.ConnectTimeout,'8 seconds'), (requests.ReadTimeout,'45-second'), (requests.exceptions.SSLError,'secure connection'), (requests.ConnectionError,'interrupted')]:
+            post.reset_mock()
+            post.side_effect=error('secret request details')
+            with self.assertRaises(ValueError) as caught:understand('Test Gemini')
+            self.assertIn(text,str(caught.exception))
+            self.assertIn('test-model',str(caught.exception))
+            self.assertNotIn('secret',str(caught.exception))
+            post.assert_called_once()
+            self.assertEqual(post.call_args.kwargs['timeout'],(8,45))
