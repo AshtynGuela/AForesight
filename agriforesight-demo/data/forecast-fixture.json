@@ -1,0 +1,16 @@
+{
+  "source": "Open-Meteo sample retrieved 2026-11-03",
+  "attribution": "https://open-meteo.com/",
+  "latitude": 13.110721,
+  "longitude": 123.77049,
+  "timezone": "Asia/Manila",
+  "days": [
+    {"date": "2026-11-03", "high": 30.6, "low": 25.3, "rain": 2.5, "probability": 82, "et0": 4.67},
+    {"date": "2026-11-04", "high": 28.5, "low": 25.4, "rain": 3.2, "probability": 97, "et0": 3.83},
+    {"date": "2026-11-05", "high": 29.6, "low": 26.0, "rain": 1.0, "probability": 40, "et0": 4.28},
+    {"date": "2026-11-06", "high": 28.8, "low": 24.6, "rain": 4.1, "probability": 63, "et0": 3.86},
+    {"date": "2026-11-07", "high": 29.5, "low": 24.1, "rain": 9.0, "probability": 75, "et0": 4.21},
+    {"date": "2026-11-08", "high": 28.8, "low": 23.7, "rain": 6.0, "probability": 90, "et0": 4.1},
+    {"date": "2026-11-09", "high": 29.9, "low": 24.4, "rain": 1.8, "probability": 92, "et0": 4.85}
+  ]
+}

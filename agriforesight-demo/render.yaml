@@ -1,0 +1,15 @@
+# Free shared demo. SQLite records reset when this service restarts or sleeps.
+services:
+  - type: web
+    name: agriforesight-demo
+    runtime: python
+    plan: free
+    region: singapore
+    buildCommand: pip install -r requirements-hosting.txt
+    startCommand: gunicorn wsgi:app --bind 0.0.0.0:$PORT --workers 1 --threads 2 --timeout 180
+    healthCheckPath: /healthz
+    envVars:
+      - key: AGRIFORESIGHT_DEMO
+        value: "1"
+      - key: AGRIFORESIGHT_DB
+        value: /tmp/agriforesight/farm.sqlite3
