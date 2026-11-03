@@ -344,7 +344,7 @@ def create_app(database=None):
 
     @app.post('/api/chat')
     def chat():
-        from assistant_chat import understand
+        from assistant_chat import understand, ai_enabled
         from crop_planning import suggest
         from engine import CROP_STAGES
         import uuid
@@ -353,7 +353,7 @@ def create_app(database=None):
         except (ValueError,TypeError,AttributeError):raise ValueError('Start a new chat and try again.')
         if not isinstance(message,str) or not 1<=len(message.strip())<=2000:raise ValueError('Write a short message, up to 2,000 characters.')
         message=message.strip();farm=get('farm',DEFAULT_FARM);key='chat:'+session;pending=get(key)
-        mode='AI-assisted' if os.environ.get('AGRIFORESIGHT_DEMO')!='1' and os.environ.get('OPENAI_API_KEY') and os.environ.get('AGRIFORESIGHT_CHAT_MODEL') else 'Guided assistant'
+        mode='AI-assisted' if ai_enabled() else 'Guided assistant'
         def reply(text,choices=None,**extra):return jsonify(text=text,choices=choices or [],mode=mode,**extra)
         if message=='Cancel':put(key,None);return reply('Okay, cancelled. What would you like to do?')
         if message=='Save this':
@@ -377,6 +377,7 @@ def create_app(database=None):
             return reply(text+' '+result['timing'],sources=result['sources'],open_page='planting')
         else:intent=understand(message)
         action=intent['intent'];value=intent['value']
+        if action=='connection_ok':return reply('Gemini connection worked. Google returned a valid reply using '+value+'. No farm records were changed.')
         if action=='weather':
             forecast=saved_forecast(farm['latitude'],farm['longitude'])
             if not forecast:return reply('No forecast saved yet. Tap Update weather to get one for your farm.',choices=['Update weather'])

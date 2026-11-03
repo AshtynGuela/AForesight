@@ -12,15 +12,15 @@ Weather is read from saved records. Update weather performs the existing provide
 
 ## Optional AI interpretation
 
-For broader phrasing, configure a compatible OpenAI chat-completions model on the server. Set these environment variables in the same PowerShell window before starting the app:
+For broader phrasing, configure Gemini 2.5 Flash through Google’s compatible chat endpoint on the server. Set these environment variables in the same PowerShell window before starting the app:
 
 ```powershell
-$env:OPENAI_API_KEY = "your-key"
-$env:AGRIFORESIGHT_CHAT_MODEL = "your-compatible-model-id"
+$env:GEMINI_API_KEY = "your-key"
+$env:AGRIFORESIGHT_CHAT_MODEL = "gemini-2.5-flash"
 .\.venv\Scripts\python.exe app.py
 ```
 
-The app does not automatically load a .env file. Keep keys out of browser files and source control. When configured, messages the guided parser cannot recognise may be sent to OpenAI for intent classification. No full farm profile or journal history is sent by this classifier. A message itself can contain personal information, so the screen discloses this connection. Provider usage can incur charges.
+The app does not automatically load a .env file. Keep keys out of browser files and source control. When configured, messages the guided parser cannot recognise may be sent to Google Gemini for intent classification. No full farm profile or journal history is sent by this classifier. A message itself can contain personal information, so the screen discloses this connection. Provider usage can incur charges.
 
 The AI returns an intent and value. Flask checks the allowed intent and crop/stage values and controls all writes. It cannot run SQL, arbitrary code or arbitrary app routes. Provider errors fall back to the guided help message. Actual provider compatibility and language accuracy need testing with the selected model.
 
@@ -39,3 +39,9 @@ Next work should focus on ambiguity handling, expiry of old pending actions, voi
 ## Working alongside the forms
 
 Chat stays open when you switch pages. Crop and stage changes include a Show the farm field button, which brings the field into view and minimises chat so it does not cover the form. Confirming a change saves it through the backend and updates the matching form input. Other unsaved farm inputs stay as you left them. The assistant currently changes crop and stage, saves notes, fetches weather and helps compare crops; it does not edit every input yet.
+
+## Render setup
+
+Local PowerShell variables do not reach Render. Push the updated code to the repository and branch connected to your Render service. In the service's Environment settings add GEMINI_API_KEY (your private key), AGRIFORESIGHT_CHAT_MODEL (gemini-2.5-flash), and AGRIFORESIGHT_AI_ENABLED (1). Save and deploy the updated code. Keep AGRIFORESIGHT_DEMO=1 if you want the other demo restrictions; AI_ENABLED explicitly permits Gemini in that mode. Public visitors can then consume your Gemini quota.
+
+Open Ask for help and select Test Gemini connection. This makes a real request without changing farm records. Errors now report missing configuration, HTTP failures, quota limits, connection failures or malformed replies without exposing credentials. A successful test confirms connectivity, not all conversational capabilities. The assistant is still a bounded intent classifier, not a general conversational agent. A .env file is not loaded automatically.
