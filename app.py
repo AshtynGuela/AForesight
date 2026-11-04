@@ -342,10 +342,26 @@ def create_app(database=None):
             return jsonify(error='The month outlook could not be loaded. Try again later.'),502
         put(key,result);return jsonify(result)
 
+    @app.get('/api/chat/history')
+    def chat_history():
+        import uuid
+        try:session=str(uuid.UUID(request.args.get('session','')))
+        except (ValueError,TypeError,AttributeError):raise ValueError('Start a new chat and try again.')
+        return jsonify(messages=get('chat_view:'+session,[]) or [])
+
+    @app.post('/api/chat/reset')
+    def chat_reset():
+        import uuid
+        try:session=str(uuid.UUID(body().get('session','')))
+        except (ValueError,TypeError,AttributeError):raise ValueError('Start a new chat and try again.')
+        for prefix in ('chat:','conversation:','chat_view:','chat_context:'):put(prefix+session,None)
+        return jsonify(cleared=True)
+
     @app.post('/api/chat')
     def chat():
         from assistant_chat import understand, ai_enabled, provider_config
         from crop_planning import suggest
+        from assistant_actions import prepare_edits, describe_edits
         from engine import CROP_STAGES
         import uuid
         data=body();message=data.get('message','');session=data.get('session','')
@@ -354,30 +370,83 @@ def create_app(database=None):
         if not isinstance(message,str) or not 1<=len(message.strip())<=2000:raise ValueError('Write a short message, up to 2,000 characters.')
         message=message.strip();farm=get('farm',DEFAULT_FARM);key='chat:'+session;pending=get(key)
         mode='AI-assisted' if ai_enabled() else 'Guided assistant'
-        def reply(text,choices=None,**extra):return jsonify(text=text,choices=choices or [],mode=mode,provider=provider_config()[0],**extra)
+        history_key='conversation:'+session
+        history=get(history_key,[]) or []
+        original_message=message
+        chat_context=get('chat_context:'+session,{}) or {}
+        if chat_context.get('farm')!=farm:chat_context={'farm':farm}
+        def reply(text,choices=None,narrate=False,**extra):
+            if narrate and ai_enabled():
+                try:
+                    explained=understand(original_message,history=list(history),context={'today':ph_today().isoformat(),'tool_result':{'text':text,'days':extra.get('days'),'sources':extra.get('sources')},'instruction':'Explain this completed read-only result. Return chat only. Do not request any action.'})
+                    if explained['intent']=='chat' and explained['value'].strip():text=explained['value'][:6000]
+                except ValueError:
+                    pass  # The real app result remains useful when narration is unavailable.
+
+            history.extend([{'role':'user','content':original_message},{'role':'assistant','content':(text+(' Saved weather returned: '+json.dumps(extra['days']) if extra.get('days') else ''))[:2500]}])
+            put(history_key,history[-20:])
+            view=get('chat_view:'+session,[]) or []
+            payload=dict(text=text,choices=choices or [],mode=mode,provider=provider_config()[0],**extra)
+            view.extend([{'role':'user','text':original_message},{'role':'assistant',**payload}])
+            put('chat_view:'+session,view[-24:])
+            return jsonify(payload)
         if message=='Cancel':put(key,None);return reply('Okay, cancelled. What would you like to do?')
         if message=='Save this':
-            if not pending or pending.get('kind') not in ('crop','stage','note'):return reply('There is no change waiting to be saved.')
+            if not pending or pending.get('kind') not in ('crop','stage','note','profile'):return reply('There is no change waiting to be saved.')
             if data.get('confirmation_id')!=pending['id']:return reply('Use Save this on the latest change, or tell me the change again.')
             if pending['farm']!=farm:put(key,None);return reply('The farm changed while we were talking. Please tell me the change again.')
             if pending['kind']=='note':
                 item={'id':pending['id'],'date':pending['date'],'crop':farm['crop'],'note':pending['value'],'technique':'Field note via assistant','outcome':'unobserved','yield_kg':None,'municipality':farm['municipality'],'created_at':datetime.now(timezone.utc).isoformat(),'schema_version':2,'farm_context':farm}
                 with db() as conn:conn.execute('INSERT OR IGNORE INTO journals VALUES (?,?)',(item['id'],json.dumps(item)))
+            elif pending['kind']=='profile':
+                updated=validate_profile({**farm,**pending['value']});updated['location']=farm.get('location');put('farm',updated)
             else:
                 field='crop' if pending['kind']=='crop' else 'crop_stage'
                 updated=validate_profile({**farm,field:pending['value']});updated['location']=farm.get('location');put('farm',updated)
-            put(key,None);return reply('Saved. Your records are updated.',changed=True,updated_fields=({field:pending['value']} if pending['kind']!='note' else {}))
-        if pending and pending.get('kind')=='note_input':
+            put(key,None);return reply('Done.',changed=True,updated_fields=(pending['value'] if pending['kind']=='profile' else {field:pending['value']} if pending['kind']!='note' else {}))
+        intent=None
+        if ai_enabled():
+            context={'farm':{k:farm.get(k) for k in ('name','municipality','area','crop','previous_crop','crop_stage','water','terrain','ph','previous_ph','nitrogen','phosphorus','potassium','sample_date','soil_method','ash','planting_date')},'pending':({'kind':pending['kind'],'value':pending.get('value')} if pending else None),'today':ph_today().isoformat(),'drainage':chat_context.get('drainage'),'crop_options':chat_context.get('crop_options')}
+            intent=understand(message,history=history,context=context)
+            if intent['intent']=='drainage' and pending and pending.get('kind')=='drainage':
+                message={'good':'Drains well','poor':'Water stands','unknown':'Not sure'}.get(intent['value'],message)
+        if pending and pending.get('kind')=='note_input' and not ai_enabled():
             intent={'intent':'note','value':message};put(key,None)
         elif pending and pending.get('kind')=='drainage' and message in ('Drains well','Water stands','Not sure'):
             drainage={'Drains well':'good','Water stands':'poor','Not sure':'unknown'}[message]
             result=suggest(farm,{'drainage':drainage},forecast=saved_forecast(farm['latitude'],farm['longitude']));put(key,None)
+            chat_context.update(drainage=drainage,crop_options=result['options'])
+            put('chat_context:'+session,chat_context)
             options=result['options'];top=next((o for o in options if not o['blocked']),None)
             text=(('One option to discuss is '+top['crop']+'. '+(' '.join(top['reasons'][:2]))+' '+(' '.join(top['cautions'][:2]))) if top else 'Check drainage with a technician before choosing a crop.')
-            return reply(text+' '+result['timing'],sources=result['sources'],open_page='planting')
-        else:intent=understand(message)
+            return reply(text+' '+result['timing'],sources=result['sources'],open_page='planting',narrate=True)
+        elif intent is None:intent=understand(message)
         action=intent['intent'];value=intent['value']
-        if action=='connection_ok':return reply('Connection worked. A valid AI reply came from '+value+'. No farm records were changed.')
+        if action=='profile':
+            draft=pending['value'] if pending and pending.get('kind')=='profile' and pending.get('farm')==farm else None
+            try:edits=prepare_edits(value,farm,draft)
+            except ValueError as exc:return reply(str(exc))
+            if all(farm.get(k)==v for k,v in edits.items()):return reply('Those details are already saved that way.')
+            confirmation_id=str(uuid.uuid4())
+            put(key,{'kind':'profile','value':edits,'farm':farm,'id':confirmation_id})
+            return reply('Here’s what I’ll change:\n'+describe_edits(edits)+'\nDoes that look right?',choices=['Save this','Cancel'],confirmation_id=confirmation_id,target_field=next(iter(edits)))
+        if action=='navigate':
+            pages={'farm':'your farm details','forecasts':'the weather','planting':'crop plans','climate':'weather records','journal':'your journal','overview':'the farm overview','learn':'methods and sources'}
+            if value in pages:return reply('Here’s '+pages[value]+'.',navigate=value)
+            return reply('Which part of the app would you like to open?')
+        if action=='connection_ok':return reply('I’m here. What would you like help with?')
+        if action=='cancel':
+            put(key,None)
+            return reply('Okay, we can leave that. What would you like to do instead?')
+        if action=='confirm':
+            if pending and pending.get('kind') in ('crop','stage','note','profile'):
+                return reply('Tap Save this to keep that change, or tell me what you’d like to adjust.',choices=['Save this','Cancel'],confirmation_id=pending['id'])
+            return reply('What would you like me to go ahead with?')
+        if action=='chat':
+            extra={}
+            if pending and pending.get('kind') in ('crop','stage','note','profile'):
+                extra={'choices':['Save this','Cancel'],'confirmation_id':pending['id']}
+            return reply(value[:6000],**extra)
         if action=='weather':
             forecast=saved_forecast(farm['latitude'],farm['longitude'])
             if not forecast:return reply('No forecast saved yet. Tap Update weather to get one for your farm.',choices=['Update weather'])
@@ -385,9 +454,17 @@ def create_app(database=None):
             if age>172800 or age<0:return reply('The saved forecast needs an update before planning. Tap Update weather.',choices=['Update weather'])
             days=[d for d in forecast['days'] if d['date']>=ph_today().isoformat()][:3]
             if not days:return reply('The saved forecast is out of date. Tap Update weather.',choices=['Update weather'])
-            return reply('Here is the saved weather for '+farm['municipality']+'. Saved '+forecast['retrieved_at'][:10]+'. Check the field too; rain can vary nearby.',days=days,choices=['Update weather'],open_page='forecasts')
-        if action=='farm':return reply(f"Your farm is {farm['name']} in {farm['municipality']}. {farm['area']} hectares, growing {farm['crop']}, stage: {farm['crop_stage']}. Water: {farm['water']}.",open_page='farm')
-        if action=='crops':put(key,{'kind':'drainage'});return reply('After rain, does water stand in your field?',choices=['Drains well','Water stands','Not sure','Cancel'])
+            return reply('Here is the saved weather for '+farm['municipality']+'. Saved '+forecast['retrieved_at'][:10]+'. Check the field too; rain can vary nearby.',days=days,choices=['Update weather'],open_page='forecasts',narrate=True)
+        if action=='farm':return reply(f"Your farm is {farm['name']} in {farm['municipality']}. {farm['area']} hectares, growing {farm['crop']}, stage: {farm['crop_stage']}. Water: {farm['water']}.",open_page='farm',narrate=True)
+        if action=='crops':
+            if chat_context.get('drainage'):
+                result=suggest(farm,{'drainage':chat_context['drainage']},forecast=saved_forecast(farm['latitude'],farm['longitude']))
+                chat_context['crop_options']=result['options'];put('chat_context:'+session,chat_context)
+                top=next((o for o in result['options'] if not o['blocked']),None)
+                text=('One option is '+top['crop']+'. '+' '.join(top['reasons'][:2])+' '+' '.join(top['cautions'][:2])) if top else 'The field conditions need a closer look before picking a crop.'
+                return reply(text+' '+result['timing'],sources=result['sources'],open_page='planting',narrate=True)
+            put(key,{'kind':'drainage'})
+            return reply('After rain, does water stand in your field?',choices=['Drains well','Water stands','Not sure','Cancel'])
         if action=='note' and not value:put(key,{'kind':'note_input'});return reply('What would you like to write down? I will save the note under today’s date.',choices=['Cancel'])
         if action in ('crop','stage','note'):
             if action=='crop' and value not in CROPS or action=='stage' and value not in CROP_STAGES:return reply('I could not match that value. Try “my crop is rice” or “newly planted”.')
