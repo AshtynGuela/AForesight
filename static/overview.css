@@ -47,3 +47,15 @@ body[data-page="overview"].ov-dates-open #period-panel{display:block;background:
 @media(max-width:1200px){body[data-page="overview"] .layout{grid-template-columns:190px minmax(0,1fr)}body[data-page="overview"] .ov-brand{font-size:15px;padding:0 12px}body[data-page="overview"] main{padding:24px}body[data-page="overview"] nav button{padding-left:15px}body[data-page="overview"] .ov-nav-icon{padding:8px}#overview .ov-grid{gap:20px}#overview .ov-crops{display:block}#overview .ov-crops h2{margin-bottom:12px}#overview .ov-stats{grid-template-columns:repeat(2,minmax(0,1fr))}#overview .ov-tip-copy{max-width:70%}#overview .ov-tip>img:not(.ov-tip-backdrop){opacity:.75}#overview .ov-crop img{width:50px}}
 @media(max-width:850px){body[data-page="overview"] .layout{grid-template-columns:minmax(0,1fr)}body[data-page="overview"] aside{padding:12px;border-radius:0;min-height:0}body[data-page="overview"] .ov-brand{margin:0 0 12px;font-size:20px}body[data-page="overview"] nav{flex-direction:row;overflow-x:auto;gap:4px}body[data-page="overview"] nav button{min-height:52px;flex-shrink:0;border-radius:16px;padding:10px}body[data-page="overview"] .ov-nav-icon{display:none}body[data-page="overview"] .ov-nav-caption{font-size:14px}#overview .ov-grid{grid-template-columns:minmax(0,1fr)}#overview .ov-tip{grid-column:1;grid-row:auto;min-height:360px}#overview .ov-summary{grid-row:auto}#overview .ov-tip-copy{max-width:62%;min-height:360px}#overview .ov-crop img{width:75px}#overview .ov-title{flex-wrap:wrap}#overview .ov-title h2{font-size:1.4em}}
 @media(max-width:480px){body[data-page="overview"] main{padding:18px 12px 90px}#overview .ov-top{margin-right:0;padding-top:50px}#overview .ov-zoom{top:0}#overview .ov-stats{gap:10px}#overview .ov-stats article{padding:12px}#overview .ov-stats img{display:none}#overview .ov-crops,#overview .ov-summary,#overview .ov-chart{padding:18px}#overview .ov-tip-copy{padding:18px;max-width:70%}#overview .ov-tip h2{font-size:1.35em}#overview .ov-crop img{width:50px}#overview .ov-crop{padding:10px;flex-wrap:wrap}}
+
+/* Farmer-facing chart summaries and readable axes. */
+#overview .ov-weather-summary{display:flex;flex-wrap:wrap;gap:6px 12px;align-items:baseline;margin:12px 0}
+#overview .ov-weather-summary strong{font-size:1.65em}
+#overview .ov-weather-summary span{font-size:.85em}
+#overview .ov-weather-summary p{flex-basis:100%;margin:4px 0;font-size:.9em;line-height:1.6}
+#overview .ov-chart-explanation{font-size:.8em;color:#49523e;line-height:1.6}
+#overview .ov-chart .plot svg{max-height:none;min-height:160px}
+#overview .ov-chart svg text{font-family:'Segoe UI',sans-serif;font-size:14px;fill:#37432c}
+#overview .ov-readings{margin:8px 0 16px}
+#overview .ov-readings summary{min-height:44px;display:flex;align-items:center;text-decoration:underline}
+#overview .ov-readings table{min-width:340px}
