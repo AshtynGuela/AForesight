@@ -21,3 +21,5 @@
 .assistant-scroll{overflow-y:auto;overscroll-behavior:contain;padding:16px;flex:1;min-height:0}
 .assistant-panel .chat-heading{margin:0 0 16px;gap:12px}.assistant-panel .chat-heading img{width:40px;height:40px}.assistant-panel .chat-heading p{font-size:13px;margin:6px 0}.assistant-panel .eyebrow{display:none}.assistant-panel .chat-starters{grid-template-columns:1fr 1fr;gap:8px}.assistant-panel .chat-starters button{padding:10px;font-size:13px}.assistant-panel #chat-log{margin:16px 0;min-height:0;gap:12px}.assistant-panel .chat-bubble{padding:12px;font-size:14px;max-width:96%}.assistant-panel .chat-composer{position:static;border-radius:0;padding:12px;margin:0;flex-shrink:0}.assistant-panel .chat-composer label{margin-bottom:8px}.assistant-panel>.source{margin:0;padding:8px 12px;font-size:11px;background:white}.assistant-target{outline:3px solid #dba840!important;outline-offset:3px}footer{padding-bottom:90px}
 @media(max-width:550px){.assistant-panel{right:12px;bottom:82px;height:calc(100dvh - 100px)}.assistant-launcher{right:12px;bottom:14px}}
+
+.chat-model-picker{margin:0;padding:10px 16px;background:#fff}.chat-model-picker select{margin-top:5px}

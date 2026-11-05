@@ -1,7 +1,35 @@
 /* Chat uses the same backend services as the forms. Confirmed writes refresh the page state. */
 let chatSession=read('agriforesight-chat-session',null);if(!chatSession){chatSession=crypto.randomUUID();save('agriforesight-chat-session',chatSession);}let chatBusy=false;
+const chatModelLabel=el('label','Assistant model','chat-model-picker');
+const chatModelSelect=el('select');
+chatModelSelect.setAttribute('aria-label','Assistant model');
+chatModelSelect.append(new Option('Loading models…',''));
+chatModelSelect.disabled=true;
+chatModelLabel.append(chatModelSelect);
+$('#assistant .assistant-top').after(chatModelLabel);
+chatModelSelect.onchange=()=>{
+    save('agriforesight-chat-model',chatModelSelect.value);
+    $('#chat-mode').textContent=chatModelSelect.selectedOptions[0].text+' selected. Your conversation continues here.';
+};
+async function loadChatModels(){
+    try{
+        const result=await api('/api/chat/models');
+        chatModelSelect.replaceChildren();
+        result.models.forEach(model=>{
+            const option=new Option(model.name+(model.available?'':' · unavailable'),model.id);
+            option.disabled=!model.available;
+            chatModelSelect.append(option);
+        });
+        const available=result.models.filter(model=>model.available);
+        const preferred=read('agriforesight-chat-model',result.default);
+        chatModelSelect.value=available.some(model=>model.id===preferred)?preferred:(available[0]?.id||'');
+        chatModelSelect.disabled=!available.length;
+        if(!available.length){chatModelSelect.append(new Option('Guided assistant',''));chatModelSelect.value='';}
+    }catch(error){chatModelSelect.replaceChildren(new Option('Guided assistant',''));}
+}
+loadChatModels();
 function chatBubble(text,who){const bubble=el('article',text,'chat-bubble '+who);$('#chat-log').append(bubble);const scroller=document.querySelector('.assistant-scroll');scroller.scrollTop=scroller.scrollHeight;return bubble;}
-async function sendChat(message,confirmationId=null){if(chatBusy)return;chatBusy=true;$('#chat-send').disabled=true;document.querySelectorAll('[data-chat]').forEach(b=>b.disabled=true);chatBubble(message,'user');const waiting=chatBubble('One moment…','assistant');try{if(message==='Update weather'){await api('/api/forecast',{});await refresh();message='Check weather';}const r=await api('/api/chat',{message,session:chatSession,confirmation_id:confirmationId});renderChatReply(waiting,r);if(r.navigate&&['farm','forecasts','planting','climate','journal','overview','learn'].includes(r.navigate)){tab(r.navigate);setAssistantOpen(false);}if(r.changed){for(const [name,value] of Object.entries(r.updated_fields||{})){if(['name','area','terrain','water','crop','previous_crop','crop_stage','planting_date','ph','previous_ph','nitrogen','phosphorus','potassium','sample_date','soil_method','ash'].includes(name)){const field=$('#farm-form').elements.namedItem(name);if(field){if(field.type==='checkbox')field.checked=value;else field.value=value??'';}}}await refresh();}const scroller=document.querySelector('.assistant-scroll');scroller.scrollTop=scroller.scrollHeight;}catch(e){waiting.textContent='Couldn’t finish that: '+e.message+' Your message is still below so you can try again.';$('#chat-message').value=message;}finally{chatBusy=false;$('#chat-send').disabled=false;document.querySelectorAll('[data-chat]').forEach(b=>b.disabled=false);}}
+async function sendChat(message,confirmationId=null){if(chatBusy)return;chatBusy=true;chatModelSelect.disabled=true;$('#chat-send').disabled=true;document.querySelectorAll('[data-chat]').forEach(b=>b.disabled=true);chatBubble(message,'user');const waiting=chatBubble('One moment…','assistant');try{if(message==='Update weather'){await api('/api/forecast',{});await refresh();message='Check weather';}const r=await api('/api/chat',{message,session:chatSession,confirmation_id:confirmationId,model:chatModelSelect.value||undefined});renderChatReply(waiting,r);if(r.navigate&&['farm','forecasts','planting','climate','journal','overview','learn'].includes(r.navigate)){tab(r.navigate);setAssistantOpen(false);}if(r.changed){for(const [name,value] of Object.entries(r.updated_fields||{})){if(['name','area','terrain','water','crop','previous_crop','crop_stage','planting_date','ph','previous_ph','nitrogen','phosphorus','potassium','sample_date','soil_method','ash'].includes(name)){const field=$('#farm-form').elements.namedItem(name);if(field){if(field.type==='checkbox')field.checked=value;else field.value=value??'';}}}await refresh();}const scroller=document.querySelector('.assistant-scroll');scroller.scrollTop=scroller.scrollHeight;}catch(e){waiting.textContent='Couldn’t finish that: '+e.message+' Your message is still below so you can try again.';$('#chat-message').value=message;}finally{chatBusy=false;chatModelSelect.disabled=!Array.from(chatModelSelect.options).some(o=>o.value&&!o.disabled);$('#chat-send').disabled=false;document.querySelectorAll('[data-chat]').forEach(b=>b.disabled=false);}}
 $('#chat-form').onsubmit=e=>{e.preventDefault();const message=$('#chat-message').value.trim();if(!message||chatBusy)return;$('#chat-message').value='';sendChat(message);};document.querySelectorAll('[data-chat]').forEach(b=>b.onclick=()=>sendChat(b.dataset.chat));
 
 function setAssistantOpen(open){$('#assistant').hidden=!open;$('#chat-toggle').setAttribute('aria-expanded',String(open));if(open){$('#chat-message').focus({preventScroll:true});}else{$('#chat-toggle').focus({preventScroll:true});}}

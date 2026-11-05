@@ -19,7 +19,7 @@ for(const [label,img] of [['Corn','imgCornOnTheCobCandyCornWaxyCornVegetableSwee
 const current=el('button',undefined,'ov-crop');current.id='ov-current-crop';current.onclick=()=>tab('farm');cropItems.append(current);const add=el('button','ï¼‹ Edit crop','ov-crop');add.onclick=()=>tab('farm');cropItems.append(add);cropsBox.append(cropItems);
 const summary=el('div',undefined,'ov-summary');oldOverview.append($('#farm-summary'));summary.append(el('h2','Your farm at a glance'),$('#farm-summary'));const shortcuts=el('div',undefined,'ov-shortcuts');for(const [label,page] of [['Edit farm details','farm'],['Write a field note','journal'],['Check the forecast','forecasts']]){const b=el('button',label,'secondary');b.onclick=()=>tab(page);shortcuts.append(b);}summary.append(shortcuts);
 const tip=el('div',undefined,'ov-tip');const tipCopy=el('div',undefined,'ov-tip-copy');tipCopy.append(el('h2','A suggestion for your farm'));const tipText=el('p');tipText.id='ov-tip-text';tipCopy.append(tipText);const details=el('button','See details','secondary');details.onclick=()=>{oldOverview.open=true;$('#recommendations').scrollIntoView({behavior:'smooth'});};tipCopy.append(details);const tipBackdrop=ovImage('imgRectangle.svg');tipBackdrop.className='ov-tip-backdrop';tip.append(tipBackdrop,tipCopy,ovImage('imgFarmerImg.png','Farmer holding vegetables'));
-function chartCard(heading,id){const card=el('div',undefined,'ov-chart');card.append(el('h2',heading));const source=el('p',undefined,'source');source.classList.add('ov-chart-source');card.append(source);const plotBox=el('div',undefined,'plot');plotBox.id=id;card.append(plotBox);const b=el('button','View records','secondary');b.onclick=()=>tab('climate');card.append(b);return card;}
+function chartCard(heading,id){const card=el('div',undefined,'ov-chart');card.append(el('h2',heading));const source=el('p',undefined,'source');source.classList.add('ov-chart-source');card.append(source);const badge=el('span',undefined,'pill ov-data-label');card.append(badge);const plotBox=el('div',undefined,'plot');plotBox.id=id;card.append(plotBox);const b=el('button','View records','secondary');b.onclick=()=>tab('climate');card.append(b);return card;}
 grid.append(cropsBox,summary,tip,chartCard('Past rainfall','ov-rain'),chartCard('Past temperature','ov-temp'));
 overview.prepend(top,stats,grid);
 // Larger date ranges use averages of recorded days, never treat missing days as zero.
@@ -62,6 +62,7 @@ const days=[...visibleHistory()].sort((a,b)=>a.date.localeCompare(b.date));const
 const label=days.length?days[0].date+' to '+days.at(-1).date:'No saved readings for these dates';overview.querySelectorAll('.ov-chart-source').forEach(n=>n.textContent=label);
 renderWeatherChart('#ov-rain',days,'rain');renderWeatherChart('#ov-temp',days,'temp');
 if(!farm.sample_date)$('#soil-status').textContent='No sample data yet';
+overview.querySelectorAll('.ov-data-label').forEach(n=>n.textContent=state.data_labels?.history||(state.climate.demo?'Sample data':'Historical weather'));
 const first=$('#recommendations article');tipText.textContent=first?(first.querySelector('h3')?.textContent||'')+' â€” '+(first.querySelector('p')?.textContent||''):'Add your farm details and weather records to see suggested actions.';
 }
 const overviewRenderOriginal=render;render=function(){overviewRenderOriginal();renderOverviewDesign();};

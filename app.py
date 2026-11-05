@@ -8,7 +8,7 @@ import sqlite3
 from contextlib import contextmanager
 from pathlib import Path
 from datetime import date, datetime, timezone, timedelta
-from flask import Flask, jsonify, request, send_from_directory
+from flask import Flask, jsonify, request, send_from_directory, g
 from werkzeug.exceptions import HTTPException
 import requests
 from engine import validate_profile, recommend, number, CROPS
@@ -33,7 +33,7 @@ def create_app(database=None):
 
     @contextmanager
     def db():
-        conn = sqlite3.connect(db_path)
+        conn = sqlite3.connect(db_path, timeout=30)
         conn.row_factory = sqlite3.Row
         try:
             with conn:
@@ -53,6 +53,20 @@ def create_app(database=None):
         with db() as conn:
             conn.execute('INSERT INTO state VALUES (?,?) ON CONFLICT(key) DO UPDATE SET value=excluded.value', (key, json.dumps(value)))
 
+    def cached_history(key):
+        saved = get(key)
+        if not saved:
+            return None
+        try:
+            retrieved = datetime.fromisoformat(saved.get('cached_at') or saved['retrieved_at'])
+            age = (datetime.now(timezone.utc) - retrieved).total_seconds()
+            # Recent records can be revised by the provider. Older periods change less often.
+            end = date.fromisoformat(saved.get('request_end') or saved['days'][-1]['date'])
+            lifetime = 86400 if (ph_today() - end).days < 30 else 30 * 86400
+            return saved if 0 <= age < lifetime else None
+        except (ValueError, TypeError, KeyError, IndexError):
+            return None
+
     def entries():
         with db() as conn:
             return [json.loads(r['payload']) for r in conn.execute('SELECT payload FROM journals ORDER BY rowid DESC')]
@@ -62,6 +76,13 @@ def create_app(database=None):
         if climate and (climate['latitude'], climate['longitude']) == (farm['latitude'], farm['longitude']):
             return climate
         return demo(farm['latitude'], farm['longitude'])
+
+    def history_label(climate):
+        if climate.get('demo'):
+            return 'Edited sample data' if climate.get('kind') == 'user_edited' else 'Sample data'
+        if climate.get('kind') in ('user_edited', 'user_supplied'):
+            return 'User-entered history'
+        return 'Historical weather'
 
     def model_key(climate):
         digest=hashlib.sha256(json.dumps(climate,sort_keys=True).encode()).hexdigest()
@@ -120,12 +141,13 @@ def create_app(database=None):
         else:
             training_start=(a-timedelta(days=730)).isoformat()
             key=f'period:{provider}:{farm["latitude"]}:{farm["longitude"]}:{training_start}:{b.isoformat()}'
-            climate=get(key)
+            climate=cached_history(key)
             if climate is None:
                 try:
                     climate=(fetch_power if provider=='nasa' else fetch_archive)(farm['latitude'],farm['longitude'],training_start,b.isoformat())
                 except (requests.RequestException,KeyError,ValueError,TypeError):
                     return jsonify(error='The weather service could not load this period. Previous records are kept. Try the other source or saved/imported data.'),502
+                climate = {**climate, 'cached_at':datetime.now(timezone.utc).isoformat()}
                 put(key,climate)
         put('climate',climate)
         period={'start':a.isoformat(),'end':b.isoformat(),'latitude':farm['latitude'],'longitude':farm['longitude'],'provider':provider}
@@ -229,7 +251,7 @@ def create_app(database=None):
             if result and matches:
                 provider=forecast if session['mode']=='forward' else get(f'comparison:{farm["latitude"]}:{farm["longitude"]}:{session["start"]}:{session["end"]}')
                 analysis={'internal':result,'provider':provider,'actions':suggested_actions(farm,{**result,'source':'Internal '+session['mode'],'retrieved_at':result.get('issued_at')},allow_past=session['mode']=='replay',label='Historical test' if session['mode']=='replay' else 'Internal forecast')}
-        return jsonify(demo_mode=os.environ.get('AGRIFORESIGHT_DEMO')=='1', farm=farm, climate=climate, weather_actions=suggested_actions(farm,forecast), analysis_period=period, analysis=analysis, journals=journals, forecast=forecast, internal=internal, saved_evaluation=scores(farm,climate), recommendation=summary)
+        return jsonify(data_labels={'history':history_label(climate), 'forecast':'Weather forecast' if forecast else 'No forecast loaded'}, demo_mode=os.environ.get('AGRIFORESIGHT_DEMO')=='1', farm=farm, climate=climate, weather_actions=suggested_actions(farm,forecast), analysis_period=period, analysis=analysis, journals=journals, forecast=forecast, internal=internal, saved_evaluation=scores(farm,climate), recommendation=summary)
 
     @app.errorhandler(FileNotFoundError)
     def missing_boundaries(error):
@@ -268,6 +290,8 @@ def create_app(database=None):
     def climate_route():
         data = body()
         farm = get('farm', DEFAULT_FARM)
+        if data.get('mode') not in (None, 'demo', 'nasa'):
+            raise ValueError('Choose NASA history or sample data.')
         if data.get('mode') == 'demo':
             climate = demo(farm['latitude'], farm['longitude'])
         else:
@@ -278,8 +302,8 @@ def create_app(database=None):
                 raise ValueError('Use valid start and end dates.')
             if a > b or b >= ph_today() or a < date(1981, 1, 1) or not 6 <= (b-a).days <= 1095:
                 raise ValueError('Choose 7–1096 historical days from 1981 onward, ending before today.')
-            key = f'power:{farm["latitude"]}:{farm["longitude"]}:{start}:{end}'
-            climate = get(key)
+            key = f'period:nasa:{farm["latitude"]}:{farm["longitude"]}:{start}:{end}'
+            climate = cached_history(key)
             if climate is None:
                 try:
                     climate = fetch_power(farm['latitude'], farm['longitude'], start, end)
@@ -288,6 +312,7 @@ def create_app(database=None):
                     app.logger.warning('NASA history request failed (%s / %s).', type(error).__name__, type(reason).__name__)
                     message = 'NASA POWER could not be reached. Check the internet connection and retry; previous records are kept. Public samples remain available in Forecasts and Simulations.' if isinstance(error,requests.ConnectionError) else 'NASA POWER could not supply usable data. Previous records are kept; try another historical period.'
                     return jsonify(error=message), 502
+                climate = {**climate, 'cached_at':datetime.now(timezone.utc).isoformat()}
                 put(key, climate)
         put('climate', climate)
         return jsonify(climate=climate)
@@ -342,6 +367,36 @@ def create_app(database=None):
             return jsonify(error='The month outlook could not be loaded. Try again later.'),502
         put(key,result);return jsonify(result)
 
+    @app.before_request
+    def select_chat_provider():
+        if request.path != '/api/chat' or request.method != 'POST':
+            return
+        from assistant_chat import SELECTED_PROVIDER, MODEL_NAMES
+        selected = body().get('model')
+        if selected is not None and (not isinstance(selected, str) or selected not in MODEL_NAMES):
+            raise ValueError('Choose Gayuma or Alon.')
+        g.chat_provider_token = SELECTED_PROVIDER.set(MODEL_NAMES.get(selected))
+
+    @app.teardown_request
+    def reset_chat_provider(error=None):
+        from assistant_chat import SELECTED_PROVIDER
+        token = g.pop('chat_provider_token', None)
+        if token is not None:
+            SELECTED_PROVIDER.reset(token)
+
+    @app.get('/api/chat/models')
+    def chat_models():
+        from assistant_chat import MODEL_NAMES, SELECTED_PROVIDER, ai_enabled
+        models = []
+        for identifier, provider in MODEL_NAMES.items():
+            token = SELECTED_PROVIDER.set(provider)
+            try:
+                models.append({'id':identifier, 'name':identifier.capitalize(), 'available':ai_enabled()})
+            finally:
+                SELECTED_PROVIDER.reset(token)
+        default = 'gayuma' if os.environ.get('AGRIFORESIGHT_AI_PROVIDER', 'groq').lower() == 'gemini' else 'alon'
+        return jsonify(models=models, default=default)
+
     @app.get('/api/chat/history')
     def chat_history():
         import uuid
@@ -392,21 +447,50 @@ def create_app(database=None):
             return jsonify(payload)
         if message=='Cancel':put(key,None);return reply('Okay, cancelled. What would you like to do?')
         if message=='Save this':
-            if not pending or pending.get('kind') not in ('crop','stage','note','profile'):return reply('There is no change waiting to be saved.')
-            if data.get('confirmation_id')!=pending['id']:return reply('Use Save this on the latest change, or tell me the change again.')
-            if pending['farm']!=farm:put(key,None);return reply('The farm changed while we were talking. Please tell me the change again.')
-            if pending['kind']=='note':
-                item={'id':pending['id'],'date':pending['date'],'crop':farm['crop'],'note':pending['value'],'technique':'Field note via assistant','outcome':'unobserved','yield_kg':None,'municipality':farm['municipality'],'created_at':datetime.now(timezone.utc).isoformat(),'schema_version':2,'farm_context':farm}
-                with db() as conn:conn.execute('INSERT OR IGNORE INTO journals VALUES (?,?)',(item['id'],json.dumps(item)))
-            elif pending['kind']=='profile':
-                updated=validate_profile({**farm,**pending['value']});updated['location']=farm.get('location');put('farm',updated)
-            else:
-                field='crop' if pending['kind']=='crop' else 'crop_stage'
-                updated=validate_profile({**farm,field:pending['value']});updated['location']=farm.get('location');put('farm',updated)
-            put(key,None);return reply('Done.',changed=True,updated_fields=(pending['value'] if pending['kind']=='profile' else {field:pending['value']} if pending['kind']!='note' else {}))
+            confirmation = data.get('confirmation_id')
+            if not isinstance(confirmation, str):
+                return reply('Use Save this on the latest change, or tell me the change again.')
+            # Lock before reading the proposal and farm, then save and consume it together.
+            with db() as conn:
+                conn.execute('BEGIN IMMEDIATE')
+                def read_saved(name, default=None):
+                    row = conn.execute('SELECT value FROM state WHERE key=?', (name,)).fetchone()
+                    return json.loads(row['value']) if row else default
+                def write_saved(name, value):
+                    conn.execute('INSERT INTO state VALUES (?,?) ON CONFLICT(key) DO UPDATE SET value=excluded.value', (name, json.dumps(value)))
+                receipt_key = 'chat_saved:' + session + ':' + confirmation
+                receipt = read_saved(receipt_key)
+                if receipt:
+                    result = receipt
+                else:
+                    pending = read_saved(key)
+                    current_farm = read_saved('farm', DEFAULT_FARM)
+                    if not pending or pending.get('kind') not in ('crop','stage','note','profile'):
+                        result = {'text':'There is no change waiting to be saved.'}
+                    elif pending['id'] != confirmation:
+                        result = {'text':'Use Save this on the latest change, or tell me the change again.'}
+                    elif pending['farm'] != current_farm:
+                        write_saved(key, None)
+                        result = {'text':'The farm changed while we were talking. Please tell me the change again.'}
+                    else:
+                        edits = {}
+                        if pending['kind'] == 'note':
+                            item = {'id':pending['id'],'date':pending['date'],'crop':current_farm['crop'],'note':pending['value'],'technique':'Field note via assistant','outcome':'unobserved','yield_kg':None,'municipality':current_farm['municipality'],'created_at':datetime.now(timezone.utc).isoformat(),'schema_version':2,'farm_context':current_farm}
+                            conn.execute('INSERT OR IGNORE INTO journals VALUES (?,?)', (item['id'], json.dumps(item)))
+                        else:
+                            field = 'crop' if pending['kind'] == 'crop' else 'crop_stage'
+                            edits = pending['value'] if pending['kind'] == 'profile' else {field:pending['value']}
+                            updated = validate_profile({**current_farm, **edits})
+                            updated['location'] = current_farm.get('location')
+                            write_saved('farm', updated)
+                        write_saved(key, None)
+                        result = {'text':'Saved your note.' if pending['kind']=='note' else 'Saved your farm changes.', 'changed':True, 'updated_fields':edits}
+                        write_saved(receipt_key, result)
+            return reply(**result)
+
         intent=None
         if ai_enabled():
-            context={'farm':{k:farm.get(k) for k in ('name','municipality','area','crop','previous_crop','crop_stage','water','terrain','ph','previous_ph','nitrogen','phosphorus','potassium','sample_date','soil_method','ash','planting_date')},'pending':({'kind':pending['kind'],'value':pending.get('value')} if pending else None),'today':ph_today().isoformat(),'drainage':chat_context.get('drainage'),'crop_options':chat_context.get('crop_options')}
+            context={'weather_data_type':history_label(climate_for(farm)),'farm':{k:farm.get(k) for k in ('name','municipality','area','crop','previous_crop','crop_stage','water','terrain','ph','previous_ph','nitrogen','phosphorus','potassium','sample_date','soil_method','ash','planting_date')},'pending':({'kind':pending['kind'],'value':pending.get('value')} if pending else None),'today':ph_today().isoformat(),'drainage':chat_context.get('drainage'),'crop_options':chat_context.get('crop_options')}
             intent=understand(message,history=history,context=context)
             if intent['intent']=='drainage' and pending and pending.get('kind')=='drainage':
                 message={'good':'Drains well','poor':'Water stands','unknown':'Not sure'}.get(intent['value'],message)

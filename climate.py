@@ -37,7 +37,7 @@ def fetch_archive(latitude,longitude,start,end):
     payload=response.json()['daily'];rows=[]
     for i,day in enumerate(payload['time']):
         temp=payload['temperature_2m_mean'][i];rain=payload['precipitation_sum'][i]
-        if isinstance(temp,(int,float)) and isinstance(rain,(int,float)) and -60<=temp<=65 and 0<=rain<=3000:
+        if isinstance(temp,(int,float)) and isinstance(rain,(int,float)) and not isinstance(temp,bool) and not isinstance(rain,bool) and -60<=temp<=65 and 0<=rain<=3000:
             et0=payload.get('et0_fao_evapotranspiration',[None]*len(payload['time']))[i]
             rows.append({'date':day,'temp':temp,'rain':rain,'et0':et0 if isinstance(et0,(int,float)) and 0<=et0<=30 else None})
     if not rows:raise ValueError('Archive returned no usable daily records.')

@@ -130,7 +130,7 @@ class AssistantTests(unittest.TestCase):
 
             self.assertEqual(self.client.get('/api/state').json['farm']['crop'],'rice')
 
-            self.assertEqual(self.chat('Save this').json['text'],'Done.')
+            self.assertEqual(self.chat('Save this').json['text'],'Saved your farm changes.')
 
             self.assertEqual(self.client.get('/api/state').json['farm']['crop'],'corn')
 

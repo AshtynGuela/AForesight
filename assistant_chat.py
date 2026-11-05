@@ -1,4 +1,5 @@
 """Small, bounded assistant: understand a request, then let Flask do the work."""
+from contextvars import ContextVar
 import json
 import os
 import re
@@ -16,12 +17,20 @@ PROVIDERS = {
 }
 
 
+SELECTED_PROVIDER = ContextVar('assistant_provider', default=None)
+MODEL_NAMES = {'gayuma':'gemini', 'alon':'groq'}
+
+
 def provider_config():
-    provider = os.environ.get('AGRIFORESIGHT_AI_PROVIDER', 'groq').strip().lower()
+    default_provider = os.environ.get('AGRIFORESIGHT_AI_PROVIDER', 'groq').strip().lower()
+    provider = SELECTED_PROVIDER.get() or os.environ.get('AGRIFORESIGHT_AI_PROVIDER', 'groq').strip().lower()
     if provider not in PROVIDERS:
         raise ValueError('Set AGRIFORESIGHT_AI_PROVIDER to groq or gemini.')
     label, key_name, default_model, endpoint = PROVIDERS[provider]
-    return label, os.environ.get(key_name, '').strip(), os.environ.get('AGRIFORESIGHT_CHAT_MODEL', default_model).strip(), endpoint, key_name
+    model = os.environ.get('AGRIFORESIGHT_' + provider.upper() + '_MODEL', '').strip()
+    if not model and provider == default_provider:
+        model = os.environ.get('AGRIFORESIGHT_CHAT_MODEL', '').strip()
+    return label, os.environ.get(key_name, '').strip(), model or default_model, endpoint, key_name
 
 
 class ReplyError(ValueError):
@@ -156,6 +165,8 @@ def guided_intent(message):
 
 
 def understand(message, history=None, context=None):
+    if SELECTED_PROVIDER.get() and not ai_enabled():
+        raise ValueError('This model is unavailable on this server. Choose the other model or ask the host to enable it.')
     if history is None or not ai_enabled():
         guided=guided_intent(message)
         if guided['intent']!='help':return guided

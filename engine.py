@@ -36,6 +36,13 @@ def validate_profile(data):
     for key, choices in {'crop': CROPS, 'previous_crop': (*CROPS, 'unknown'), 'water': ('rainfed', 'irrigated'), 'terrain': ('lowland', 'upland', 'coastal'), 'soil_method': ('unknown', 'lab', 'sensor', 'field kit'), 'crop_stage': CROP_STAGES}.items():
         if result[key] not in choices:
             raise ValueError(f'Invalid {key}.')
+    for field in ('planting_date', 'sample_date'):
+        if result[field]:
+            try:
+                if date.fromisoformat(result[field]).isoformat() != result[field]:
+                    raise ValueError()
+            except ValueError:
+                raise ValueError(f'{field.replace("_", " ").capitalize()} must use YYYY-MM-DD.') from None
     if result['planting_date']:
         try:
             if date.fromisoformat(result['planting_date']) > ph_today():
