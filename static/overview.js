@@ -63,7 +63,7 @@ const label=days.length?days[0].date+' to '+days.at(-1).date:'No saved readings 
 renderWeatherChart('#ov-rain',days,'rain');renderWeatherChart('#ov-temp',days,'temp');
 if(!farm.sample_date)$('#soil-status').textContent='No sample data yet';
 overview.querySelectorAll('.ov-data-label').forEach(n=>n.textContent=state.data_labels?.history||(state.climate.demo?'Sample data':'Historical weather'));
-const first=$('#recommendations article');tipText.textContent=first?(first.querySelector('h3')?.textContent||'')+' â€” '+(first.querySelector('p')?.textContent||''):'Add your farm details and weather records to see suggested actions.';
+const first=$('#recommendations article');tipText.textContent=first?(first.querySelector('h3')?.textContent||'')+' — '+(first.querySelector('p')?.textContent||''):'Add your farm details and weather records to see suggested actions.';
 }
 const overviewRenderOriginal=render;render=function(){overviewRenderOriginal();renderOverviewDesign();};
 
