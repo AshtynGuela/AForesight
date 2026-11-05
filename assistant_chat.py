@@ -100,7 +100,15 @@ When pending.kind is note_input, use note for their note content; if they instea
 answer with chat and leave the pending note available. Never turn a question into a saved note.
 If context has crop_options, explain or compare those options when asked, using their reasons/cautions.
 If drainage is already known in context, do not ask again unless the user says conditions changed.
-Saved weather can be outdated: use weather to get current app checks before claiming future conditions.
+Current context.weather is refreshed from the app on every turn and takes precedence over older chat.
+It contains history, forecast, outlook (30-day), and internal (app prediction). Check available and
+record_count before saying data is missing. Saved or stale data exists even when it needs an update.
+Use weather intent with value history, forecast, outlook or internal for the requested data.
+Use chat for follow-up explanations grounded in these records. Dates outside the supplied days are
+not included in the excerpt; do not invent them or claim the entire dataset is absent.
+Historical weather and sample data cannot establish upcoming conditions. Internal results may be
+historical tests; check status, dates and note. State dates and freshness when discussing forecasts.
+If 'forecast' is ambiguous, explain which saved sources exist and ask which one they mean.
 Combine explicitly requested farm edits into one profile action so they can be reviewed together.
 For unrelated tasks handle the most immediate task first; do not claim the rest are finished.
 Use profile with value containing a JSON object of changed fields only. Allowed fields:
@@ -152,7 +160,9 @@ def guided_intent(message):
     if text.startswith(('note:', 'tala:')):
         return {'intent':'note','value':message.split(':',1)[1].strip()}
     if text in ('save a note','save note','note','tala'):return {'intent':'note','value':''}
-    if any(w in text for w in ('weather','rain','ulan','panahon')):return {'intent':'weather','value':''}
+    if any(w in text for w in ('history','historical','past weather')):return {'intent':'weather','value':'history'}
+    if any(w in text for w in ('30-day','30 day','month outlook')):return {'intent':'weather','value':'outlook'}
+    if any(w in text for w in ('weather','forecast','temperature','rain','ulan','panahon')):return {'intent':'weather','value':''}
     if any(w in text for w in ('suggest','rotation','plant next','it anim','itatanim','crop options','choose a crop')):return {'intent':'crops','value':''}
     stages={'newly planted':'establishment','bagong tanim':'establishment','flowering':'flowering','namumulaklak':'flowering','growing leaves':'vegetative','nearing harvest':'maturity'}
     for phrase,stage in stages.items():

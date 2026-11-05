@@ -397,6 +397,47 @@ def create_app(database=None):
         default = 'gayuma' if os.environ.get('AGRIFORESIGHT_AI_PROVIDER', 'groq').lower() in ('gemini', 'openrouter') else 'alon'
         return jsonify(models=models, default=default)
 
+    def chat_weather(farm):
+        def describe(payload, limit=31):
+            if not payload:
+                return {'available':False}
+            rows = sorted(payload.get('days') or [], key=lambda row:row.get('date',''))
+            timestamp = payload.get('retrieved_at') or payload.get('issued_at')
+            age = None
+            try:
+                age = (datetime.now(timezone.utc)-datetime.fromisoformat(timestamp)).total_seconds()
+            except (TypeError, ValueError):
+                pass
+            return {
+                'available':True, 'source':payload.get('source'), 'sample':bool(payload.get('demo')),
+                'status':payload.get('status'), 'mode':payload.get('mode'), 'saved_at':timestamp,
+                'needs_update':age is None or age < 0 or age > 172800 or bool(rows and rows[-1]['date'] < ph_today().isoformat()),
+                'start':rows[0]['date'] if rows else None, 'end':rows[-1]['date'] if rows else None,
+                'record_count':len(rows), 'days':rows[-limit:],
+                'note':payload.get('note') or payload.get('message'),
+            }
+        climate = climate_for(farm)
+        period = active_period(farm)
+        selected = period_days(climate, period) if period else climate['days']
+        history = describe({**climate, 'days':selected})
+        history.pop('needs_update', None)
+        for field in ('rain', 'temp'):
+            values = [row[field] for row in selected if isinstance(row.get(field), (int,float)) and not isinstance(row[field],bool)]
+            history['average_' + field] = round(sum(values)/len(values),2) if values else None
+        history['selection'] = period
+        internal = get(model_key(climate))
+        session = get('model_session')
+        if session and session.get('climate_key') == model_key(climate):
+            internal = get(session['key']) or internal
+            if internal:
+                internal = {**internal, 'mode':session.get('mode')}
+        return {
+            'history':history,
+            'forecast':describe(saved_forecast(farm['latitude'],farm['longitude'])),
+            'outlook':describe(get(f"month:{farm['latitude']}:{farm['longitude']}")),
+            'internal':describe(internal),
+        }
+
     @app.get('/api/chat/history')
     def chat_history():
         import uuid
@@ -428,12 +469,13 @@ def create_app(database=None):
         history_key='conversation:'+session
         history=get(history_key,[]) or []
         original_message=message
+        weather_context=chat_weather(farm)
         chat_context=get('chat_context:'+session,{}) or {}
         if chat_context.get('farm')!=farm:chat_context={'farm':farm}
         def reply(text,choices=None,narrate=False,**extra):
             if narrate and ai_enabled():
                 try:
-                    explained=understand(original_message,history=list(history),context={'today':ph_today().isoformat(),'tool_result':{'text':text,'days':extra.get('days'),'sources':extra.get('sources')},'instruction':'Explain this completed read-only result. Return chat only. Do not request any action.'})
+                    explained=understand(original_message,history=list(history),context={'weather':weather_context,'today':ph_today().isoformat(),'tool_result':{'text':text,'days':extra.get('days'),'sources':extra.get('sources')},'instruction':'Explain this completed read-only result. Return chat only. Do not request any action.'})
                     if explained['intent']=='chat' and explained['value'].strip():text=explained['value'][:6000]
                 except ValueError:
                     pass  # The real app result remains useful when narration is unavailable.
@@ -490,7 +532,7 @@ def create_app(database=None):
 
         intent=None
         if ai_enabled():
-            context={'weather_data_type':history_label(climate_for(farm)),'farm':{k:farm.get(k) for k in ('name','municipality','area','crop','previous_crop','crop_stage','water','terrain','ph','previous_ph','nitrogen','phosphorus','potassium','sample_date','soil_method','ash','planting_date')},'pending':({'kind':pending['kind'],'value':pending.get('value')} if pending else None),'today':ph_today().isoformat(),'drainage':chat_context.get('drainage'),'crop_options':chat_context.get('crop_options')}
+            context={'weather':weather_context,'weather_data_type':history_label(climate_for(farm)),'farm':{k:farm.get(k) for k in ('name','municipality','area','crop','previous_crop','crop_stage','water','terrain','ph','previous_ph','nitrogen','phosphorus','potassium','sample_date','soil_method','ash','planting_date')},'pending':({'kind':pending['kind'],'value':pending.get('value')} if pending else None),'today':ph_today().isoformat(),'drainage':chat_context.get('drainage'),'crop_options':chat_context.get('crop_options')}
             intent=understand(message,history=history,context=context)
             if intent['intent']=='drainage' and pending and pending.get('kind')=='drainage':
                 message={'good':'Drains well','poor':'Water stands','unknown':'Not sure'}.get(intent['value'],message)
@@ -532,13 +574,28 @@ def create_app(database=None):
                 extra={'choices':['Save this','Cancel'],'confirmation_id':pending['id']}
             return reply(value[:6000],**extra)
         if action=='weather':
-            forecast=saved_forecast(farm['latitude'],farm['longitude'])
-            if not forecast:return reply('No forecast saved yet. Tap Update weather to get one for your farm.',choices=['Update weather'])
-            age=(datetime.now(timezone.utc)-datetime.fromisoformat(forecast['retrieved_at'])).total_seconds()
-            if age>172800 or age<0:return reply('The saved forecast needs an update before planning. Tap Update weather.',choices=['Update weather'])
-            days=[d for d in forecast['days'] if d['date']>=ph_today().isoformat()][:3]
-            if not days:return reply('The saved forecast is out of date. Tap Update weather.',choices=['Update weather'])
-            return reply('Here is the saved weather for '+farm['municipality']+'. Saved '+forecast['retrieved_at'][:10]+'. Check the field too; rain can vary nearby.',days=days,choices=['Update weather'],open_page='forecasts',narrate=True)
+            category = value if value in ('history','outlook','internal','forecast') else 'forecast'
+            weather = weather_context[category]
+            if not weather['available']:
+                available = [name for name, item in weather_context.items() if item['available']]
+                return reply('No '+category+' saved yet. Available data: '+', '.join(available)+'.', choices=['Update weather'] if category=='forecast' else [], open_page='forecasts')
+            label = {'history':'historical weather','outlook':'30-day outlook','internal':'app prediction','forecast':'short-range forecast'}[category]
+            text = 'Here is the saved '+label+' for '+farm['municipality']+'.'
+            if weather.get('mode') == 'replay':
+                text += ' This is a historical test.'
+            if weather.get('start'):
+                text += ' Covers '+weather['start']+' to '+weather['end']+'.'
+            if weather.get('source'):
+                text += ' Source: '+weather['source']+'.'
+            if weather['record_count'] > len(weather['days']):
+                text += ' Showing the latest '+str(len(weather['days']))+' recorded days in this selection.'
+            if weather['sample']:
+                text += ' These are sample values.'
+            if weather.get('needs_update'):
+                text += ' This saved issue needs an update before planning future work.'
+            if weather.get('note'):
+                text += ' '+str(weather['note'])
+            return reply(text, days=weather['days'], choices=['Update weather'] if category=='forecast' else [], open_page='climate' if category=='history' else 'forecasts', narrate=True)
         if action=='farm':return reply(f"Your farm is {farm['name']} in {farm['municipality']}. {farm['area']} hectares, growing {farm['crop']}, stage: {farm['crop_stage']}. Water: {farm['water']}.",open_page='farm',narrate=True)
         if action=='crops':
             if chat_context.get('drainage'):
