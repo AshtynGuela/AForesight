@@ -273,8 +273,14 @@ def create_app(database=None):
             return jsonify(forecast=forecast, cached=True)
         try:
             forecast = fetch_forecast(farm['latitude'], farm['longitude'])
-        except (requests.RequestException, ValueError, KeyError, TypeError):
-            return jsonify(error='Forecast provider is unavailable. Any previous forecast is retained with its original dates.'), 502
+        except (requests.RequestException, ValueError, KeyError, TypeError) as error:
+            response = getattr(error, 'response', None)
+            status = response.status_code if response is not None else None
+            app.logger.warning('Forecast update failed: type=%s status=%s', type(error).__name__, status)
+            reason = 'The forecast service is busy. Try again shortly.' if status == 429 else 'The forecast service could not complete the update.'
+            if isinstance(error, requests.Timeout):
+                reason = 'The forecast service took too long to respond.'
+            return jsonify(error=reason+' Saved forecasts are kept with their original dates.'), 502
         put(key, forecast)
         archive('open_meteo', forecast)
         return jsonify(forecast=forecast, cached=False)

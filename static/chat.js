@@ -29,7 +29,23 @@ async function loadChatModels(){
 }
 loadChatModels();
 function chatBubble(text,who){const bubble=el('article',text,'chat-bubble '+who);$('#chat-log').append(bubble);const scroller=document.querySelector('.assistant-scroll');scroller.scrollTop=scroller.scrollHeight;return bubble;}
-async function sendChat(message,confirmationId=null){if(chatBusy)return;chatBusy=true;chatModelSelect.disabled=true;$('#chat-send').disabled=true;document.querySelectorAll('[data-chat]').forEach(b=>b.disabled=true);chatBubble(message,'user');const waiting=chatBubble('One moment…','assistant');try{if(message==='Update weather'){await api('/api/forecast',{});await refresh();message='Check weather';}const r=await api('/api/chat',{message,session:chatSession,confirmation_id:confirmationId,model:chatModelSelect.value||undefined});renderChatReply(waiting,r);if(r.navigate&&['farm','forecasts','planting','climate','journal','overview','learn'].includes(r.navigate)){tab(r.navigate);setAssistantOpen(false);}if(r.changed){for(const [name,value] of Object.entries(r.updated_fields||{})){if(['name','area','terrain','water','crop','previous_crop','crop_stage','planting_date','ph','previous_ph','nitrogen','phosphorus','potassium','sample_date','soil_method','ash'].includes(name)){const field=$('#farm-form').elements.namedItem(name);if(field){if(field.type==='checkbox')field.checked=value;else field.value=value??'';}}}await refresh();}const scroller=document.querySelector('.assistant-scroll');scroller.scrollTop=scroller.scrollHeight;}catch(e){waiting.textContent='Couldn’t finish that: '+e.message+' Your message is still below so you can try again.';$('#chat-message').value=message;}finally{chatBusy=false;chatModelSelect.disabled=!Array.from(chatModelSelect.options).some(o=>o.value&&!o.disabled);$('#chat-send').disabled=false;document.querySelectorAll('[data-chat]').forEach(b=>b.disabled=false);}}
+async function sendChat(message,confirmationId=null){if(chatBusy)return;chatBusy=true;chatModelSelect.disabled=true;$('#chat-send').disabled=true;document.querySelectorAll('[data-chat]').forEach(b=>b.disabled=true);chatBubble(message,'user');const waiting=chatBubble('One moment…','assistant');try{if(message==='Update weather'){
+    try{await api('/api/forecast',{});}
+    catch(updateError){
+        try{await refresh();}catch(refreshError){/* Use the last state already displayed on this device. */}
+        const saved=state?.forecast;
+        const days=saved?.days||[];
+        const savedDate=saved?.retrieved_at?.slice(0,10);
+        renderChatReply(waiting,{
+            text:days.length
+                ?'The weather update failed. Here is the previously saved forecast'+(savedDate?' from '+savedDate:'')+'. Check the dates below before using it for upcoming work.'
+                :'The weather update failed, and there is no saved short-range forecast available here. You can still open Forecasts to check other saved weather data.',
+            days,choices:['Update weather'],open_page:'forecasts',mode:'Guided assistant'
+        });
+        return;
+    }
+    await refresh();message='Check weather';
+}const r=await api('/api/chat',{message,session:chatSession,confirmation_id:confirmationId,model:chatModelSelect.value||undefined});renderChatReply(waiting,r);if(r.navigate&&['farm','forecasts','planting','climate','journal','overview','learn'].includes(r.navigate)){tab(r.navigate);setAssistantOpen(false);}if(r.changed){for(const [name,value] of Object.entries(r.updated_fields||{})){if(['name','area','terrain','water','crop','previous_crop','crop_stage','planting_date','ph','previous_ph','nitrogen','phosphorus','potassium','sample_date','soil_method','ash'].includes(name)){const field=$('#farm-form').elements.namedItem(name);if(field){if(field.type==='checkbox')field.checked=value;else field.value=value??'';}}}await refresh();}const scroller=document.querySelector('.assistant-scroll');scroller.scrollTop=scroller.scrollHeight;}catch(e){waiting.textContent='Couldn’t finish that: '+e.message+' Your message is still below so you can try again.';$('#chat-message').value=message;}finally{chatBusy=false;chatModelSelect.disabled=!Array.from(chatModelSelect.options).some(o=>o.value&&!o.disabled);$('#chat-send').disabled=false;document.querySelectorAll('[data-chat]').forEach(b=>b.disabled=false);}}
 $('#chat-form').onsubmit=e=>{e.preventDefault();const message=$('#chat-message').value.trim();if(!message||chatBusy)return;$('#chat-message').value='';sendChat(message);};document.querySelectorAll('[data-chat]').forEach(b=>b.onclick=()=>sendChat(b.dataset.chat));
 
 function setAssistantOpen(open){$('#assistant').hidden=!open;$('#chat-toggle').setAttribute('aria-expanded',String(open));if(open){$('#chat-message').focus({preventScroll:true});}else{$('#chat-toggle').focus({preventScroll:true});}}
