@@ -12,20 +12,21 @@ SCHEMA = {"type":"object", "properties":{"intent":{"type":"string","enum":list(I
 
 
 PROVIDERS = {
+    'openrouter': ('OpenRouter', 'OPENROUTER_API_KEY', 'nvidia/nemotron-3.5-super-vl:free', 'https://openrouter.ai/api/v1/chat/completions'),
     'groq': ('Groq', 'GROQ_API_KEY', 'openai/gpt-oss-20b', 'https://api.groq.com/openai/v1/chat/completions'),
     'gemini': ('Gemini', 'GEMINI_API_KEY', 'gemini-3.8-flash', 'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions'),
 }
 
 
 SELECTED_PROVIDER = ContextVar('assistant_provider', default=None)
-MODEL_NAMES = {'gayuma':'gemini', 'alon':'groq'}
+MODEL_NAMES = {'gayuma':'openrouter', 'alon':'groq'}
 
 
 def provider_config():
     default_provider = os.environ.get('AGRIFORESIGHT_AI_PROVIDER', 'groq').strip().lower()
     provider = SELECTED_PROVIDER.get() or os.environ.get('AGRIFORESIGHT_AI_PROVIDER', 'groq').strip().lower()
     if provider not in PROVIDERS:
-        raise ValueError('Set AGRIFORESIGHT_AI_PROVIDER to groq or gemini.')
+        raise ValueError('Set AGRIFORESIGHT_AI_PROVIDER to groq, openrouter or gemini.')
     label, key_name, default_model, endpoint = PROVIDERS[provider]
     model = os.environ.get('AGRIFORESIGHT_' + provider.upper() + '_MODEL', '').strip()
     if not model and provider == default_provider:

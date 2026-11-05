@@ -394,7 +394,7 @@ def create_app(database=None):
                 models.append({'id':identifier, 'name':identifier.capitalize(), 'available':ai_enabled()})
             finally:
                 SELECTED_PROVIDER.reset(token)
-        default = 'gayuma' if os.environ.get('AGRIFORESIGHT_AI_PROVIDER', 'groq').lower() == 'gemini' else 'alon'
+        default = 'gayuma' if os.environ.get('AGRIFORESIGHT_AI_PROVIDER', 'groq').lower() in ('gemini', 'openrouter') else 'alon'
         return jsonify(models=models, default=default)
 
     @app.get('/api/chat/history')

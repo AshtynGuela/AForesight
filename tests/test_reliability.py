@@ -57,7 +57,7 @@ class ReliabilityTests(unittest.TestCase):
     def test_model_selection_is_request_local(self):
         import os
         from assistant_chat import provider_config
-        with patch.dict(os.environ, {'AGRIFORESIGHT_AI_PROVIDER':'groq','AGRIFORESIGHT_CHAT_MODEL':'groq-custom','AGRIFORESIGHT_GEMINI_MODEL':'gemini-custom','GROQ_API_KEY':'test-groq','GEMINI_API_KEY':'test-gemini','AGRIFORESIGHT_AI_ENABLED':'1'}):
+        with patch.dict(os.environ, {'AGRIFORESIGHT_AI_PROVIDER':'groq','AGRIFORESIGHT_CHAT_MODEL':'groq-custom','AGRIFORESIGHT_OPENROUTER_MODEL':'nvidia/nemotron-3.5-super-vl:free','GROQ_API_KEY':'test-groq','OPENROUTER_API_KEY':'test-openrouter','AGRIFORESIGHT_AI_ENABLED':'1'}):
             seen = []
             def answer(*args, **kwargs):
                 seen.append(provider_config()[:3])
@@ -66,7 +66,7 @@ class ReliabilityTests(unittest.TestCase):
                 for model in ('gayuma','alon'):
                     response = self.client.post('/api/chat', json={'session':str(uuid.uuid4()),'message':'hello','model':model})
                     self.assertEqual(response.status_code, 200)
-            self.assertEqual(seen[0], ('Gemini','test-gemini','gemini-custom'))
+            self.assertEqual(seen[0], ('OpenRouter','test-openrouter','nvidia/nemotron-3.5-super-vl:free'))
             self.assertEqual(seen[1], ('Groq','test-groq','groq-custom'))
             self.assertEqual(provider_config()[0], 'Groq')
             response = self.client.post('/api/chat', json={'session':str(uuid.uuid4()),'message':'hello','model':'unknown'})
