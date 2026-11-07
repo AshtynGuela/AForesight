@@ -42,8 +42,4 @@ On first use, the app downloads one year of NASA POWER history for the saved coo
 
 Open the app online once and download weather before going offline. The app shell, sourced history, forecasts, notes and saved crop results can then be read on the same browser. New weather, new crop calculations and cloud AI chat still need internet. Old forecasts and cached crop results display their saved dates. Clearing browser/site data also clears local copies, so export a backup first.
 
-Screens follow Figma Desktop 3 (Forecast) and Desktop 4 (Crop Plans). The completed Field Journal is frame `107:338`, named Desktop 6 in the file; Desktop 5 is an unfinished Forecast copy. **More weather tools** keeps the 30-day outlook and comparison tools available. Decorative photos cache after loading and do not block installation of essential offline files.
-
 Weather credits: [NASA POWER](https://power.larc.nasa.gov/), [Open-Meteo](https://open-meteo.com/) under CC BY 4.0, and [MET Norway](https://api.met.no/doc/License) for backup current air estimates. The street-photo tile uses [KartaView](https://kartaview.org/) under CC BY-SA 4.0. Model estimates are not measurements taken on the farm.
-
-The screen code is in `static/forecasts.js`, `static/workspaces.js` and their matching CSS files. `static/forecast-store.js`, `static/history-store.js` and `static/journal-store.js` handle device copies. Run all client checks with `node --test tests/*.cjs`.
