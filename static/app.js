@@ -1750,36 +1750,44 @@ $("#month-update").onclick = (e) =>
     );
     box.append(detail);
   });
+function renderCropPlan(r) {
+  const box = $("#crop-plan-result");
+  box.replaceChildren(
+    el("h2", r.previous_crop + " → " + r.crop),
+    el("p", r.note),
+  );
+  if (r.warning) box.prepend(el("p", r.warning, "context-note"));
+  (r.checks || []).forEach((t) => box.append(el("p", "• " + t)));
+  box.append(
+    makeTable(
+      ["When", "What to do"],
+      r.calendar.map((d) => [d.date, d.task]),
+    ),
+  );
+  for (const source of r.sources || []) {
+    const a = el("a", source.title);
+    a.href = source.url;
+    a.target = "_blank";
+    a.rel = "noreferrer";
+    const p = el("p");
+    p.append(a);
+    box.append(p);
+  }
+  box.hidden = false;
+}
+
 $("#crop-plan-form").onsubmit = (e) => {
   e.preventDefault();
-  run(e.currentTarget.querySelector("button"), async () => {
+  const form = e.currentTarget;
+  run(form.querySelector("button"), async () => {
     const r = await api(
       "/api/crop-plan",
-      Object.fromEntries(new FormData($("#crop-plan-form"))),
+      Object.fromEntries(new FormData(form)),
     );
     save("agriforesight-crop-plan-v1", r);
-    const box = $("#crop-plan-result");
-    box.replaceChildren(
-      el("h2", r.previous_crop + " → " + r.crop),
-      el("p", r.note),
-    );
-    if (r.warning) box.prepend(el("p", r.warning, "context-note"));
-    r.checks.forEach((t) => box.append(el("p", "• " + t)));
-    box.append(
-      makeTable(
-        ["When", "What to do"],
-        r.calendar.map((d) => [d.date, d.task]),
-      ),
-    );
-    for (const source of r.sources) {
-      const a = el("a", source.title);
-      a.href = source.url;
-      a.target = "_blank";
-      a.rel = "noreferrer";
-      const p = el("p");
-      p.append(a);
-      box.append(p);
-    }
+    renderCropPlan(r);
+    if (document.body.dataset.page === "planting")
+      $("#crop-plan-result").scrollIntoView({ block: "nearest" });
   });
 };
 
@@ -1789,14 +1797,12 @@ $("#suggest-crops").onclick = (e) =>
       drainage: $("#suggest-drainage").value,
     });
     const box = $("#crop-suggestions");
-    box.replaceChildren(
-      el("p", r.timing, "weather-summary"),
-      el(
-        "p",
-        `Using: ${r.inputs.previous_crop} → ${r.inputs.current_crop} → next crop · ${r.inputs.terrain} · ${r.inputs.water}. ${r.inputs.forecast_days_used} usable forecast days.`,
-      ),
-    );
-    if (r.warning) box.prepend(el("p", r.warning, "context-note"));
+    $("#crop-comparison-timing").textContent = r.timing;
+    const inputs = $("#crop-comparison-inputs");
+    inputs.textContent = `Using: ${r.inputs.previous_crop} → ${r.inputs.current_crop} → next crop · ${r.inputs.terrain} · ${r.inputs.water}. ${r.inputs.forecast_days_used} usable forecast days.`;
+    inputs.hidden = false;
+    box.replaceChildren();
+    if (r.warning) box.append(el("p", r.warning, "context-note"));
     for (const option of r.options) {
       const card = el("article", undefined, "panel");
       card.append(el("h2", option.crop), el("span", option.status, "pill"));
@@ -1816,18 +1822,16 @@ $("#suggest-crops").onclick = (e) =>
         f.elements.crop.value = option.crop;
         f.elements.previous_crop.value = r.inputs.current_crop;
         f.elements.drainage.value = r.inputs.drainage;
-        f.closest("details").hidden = false;
-        f.closest("details").open = true;
+        $("#planting .cp-calendar").open = true;
+        f.dispatchEvent(new Event("input", { bubbles: true }));
         f.scrollIntoView({ behavior: "smooth" });
+        f.elements.start.focus({ preventScroll: true });
       };
       card.append(choose);
       box.append(card);
     }
-    const detail = el("details", undefined, "panel");
-    detail.append(
-      el("summary", "Missing details and how this works"),
-      el("p", r.method),
-    );
+    const detail = $("#crop-comparison-basis");
+    detail.replaceChildren(el("p", r.method));
     r.missing.forEach((t) => detail.append(el("p", t)));
     for (const source of r.sources) {
       const p = el("p"),
@@ -1838,5 +1842,4 @@ $("#suggest-crops").onclick = (e) =>
       p.append(a);
       detail.append(p);
     }
-    box.append(detail);
   });

@@ -366,78 +366,111 @@
             </div>
           </details>
         </section>
-        <section id="planting" class="page" hidden>
-          <h1>What could I plant next?</h1>
-          <p>
+        <section id="planting" class="page workspace-panel" hidden>
+          <h1>Crop Plans</h1>
+          <p class="cp-intro">
             Let’s compare crops using your saved farm details and the latest
             saved weather.
           </p>
-          <div class="panel">
+          <div class="panel cp-choice">
             <label
-              >Does water stand in the field after rain?<select
-                id="suggest-drainage"
-              >
+              >Does the field drain well?<select id="suggest-drainage">
                 <option value="unknown">Not sure</option>
-                <option value="good">No, it drains well</option>
-                <option value="poor">Yes, water tends to stand</option>
+                <option value="good">Yes, it drains well</option>
+                <option value="poor">Water tends to stand</option>
               </select></label
-            ><button id="suggest-crops">Find options for my farm</button>
-            <p>
-              Save any changes in My farm & soil first. These suggestions use
-              your current crop as the crop you’re rotating out of.
-            </p>
+            ><button id="suggest-crops" type="button">
+              Find options for my farm
+            </button>
           </div>
-          <div id="crop-suggestions"></div>
-          <details class="panel">
-            <summary>Make a calendar once you’ve picked a crop</summary>
-            <form id="crop-plan-form" class="panel">
-              <div class="form-grid">
+          <section class="cp-comparison" aria-label="Crop comparison">
+            <p id="crop-comparison-timing" class="cp-timing" role="status">
+              Ready to compare crops
+            </p>
+            <p id="crop-comparison-inputs" class="cp-inputs" hidden></p>
+            <div class="panel cp-results">
+              <details id="crop-comparison-details">
+                <summary>Missing details and how this works</summary>
+                <div id="crop-comparison-basis">
+                  <p>
+                    The comparison uses your saved farm details and any recent
+                    forecast for your field.
+                  </p>
+                </div>
+              </details>
+              <div id="crop-suggestions">
+                <p>
+                  Choose your drainage and tap
+                  <strong>Find options for my farm</strong> to see which crops
+                  could fit your field.
+                </p>
+              </div>
+            </div>
+          </section>
+          <details class="panel cp-calendar" open>
+            <summary>Planting calendar</summary>
+            <form id="crop-plan-form">
+              <div class="cp-field-row">
                 <label
                   >Last crop<select name="previous_crop">
-                    <option>rice</option>
-                    <option>corn</option>
-                    <option>mungbean</option>
-                    <option>sweet potato</option>
-                    <option>unknown</option>
+                    <option value="rice">Rice</option>
+                    <option value="corn">Corn</option>
+                    <option value="mungbean">Mungbean</option>
+                    <option value="sweet potato">Sweet potato</option>
+                    <option value="unknown">Not sure</option>
                   </select></label
-                ><label
+                >
+                <label
                   >Next crop<select name="crop">
-                    <option>mungbean</option>
-                    <option>rice</option>
-                    <option>corn</option>
-                    <option>sweet potato</option>
+                    <option value="mungbean">Mungbean</option>
+                    <option value="rice">Rice</option>
+                    <option value="corn">Corn</option>
+                    <option value="sweet potato">Sweet potato</option>
                   </select></label
-                ><label
+                >
+              </div>
+              <div class="cp-field-row">
+                <label
                   >Possible planting date<input
                     name="start"
                     type="date"
-                    required /></label
-                ><label
+                    required
+                /></label>
+                <label
                   >Days to harvest for your variety<input
                     name="duration"
                     type="number"
                     min="45"
                     max="240"
-                    value="100"
-                    required /></label
-                ><label
+                    placeholder="Enter days"
+                    aria-describedby="crop-duration-help"
+                    required
+                /></label>
+              </div>
+              <div class="cp-field-row">
+                <label class="cp-plan-drainage"
                   >Does the field drain well?<select name="drainage">
                     <option value="unknown">Not sure</option>
                     <option value="good">Yes</option>
                     <option value="poor">Water tends to stand</option>
                   </select></label
                 >
+                <button class="cp-plan-submit" type="submit">
+                  See my planting plan
+                </button>
               </div>
-              <p>
-                Check the seed label or ask your technician for the crop
-                duration. The number above is just a starting example.
+              <p id="crop-duration-help" class="source">
+                Use the number of days on your seed label, or ask your local
+                technician.
               </p>
-              <button>See my planting plan</button>
             </form>
-            <div id="crop-plan-result" class="panel">
-              Pick a crop and date to get started.
-            </div>
           </details>
+          <section
+            id="crop-plan-result"
+            class="panel"
+            aria-label="Your planting plan"
+            hidden
+          ></section>
         </section>
         <section id="climate" class="page" hidden>
           <div class="eyebrow">WEATHER DATA</div>

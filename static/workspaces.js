@@ -8,43 +8,23 @@
     .forEach((o) => {
       if (o.value !== "current") o.remove();
     });
-  const durationHelp = $("#crop-plan-form").querySelector("p");
-  durationHelp.textContent =
-    "Use the duration on your seed label or ask your local technician.";
-  const cropPage = $("#planting");
-  cropPage.classList.add("workspace-panel");
-  const drainage = $("#suggest-drainage");
-  const cropCard = drainage.closest(".panel");
-  cropCard.classList.add("cp-choice");
-  cropCard.querySelector("p").textContent =
-    "Uses your saved farm and current crop.";
-  cropCard.querySelector("label").classList.add("cp-drainage");
-  $("#crop-plan-form").elements.duration.value = "";
-  $("#crop-plan-form").elements.duration.placeholder = "From your seed label";
-  cropPage.querySelector("h1").textContent = "Crop Plans";
-  const cropTools = cropPage.querySelector("details");
-  cropTools.classList.add("cp-calendar");
-  $("#crop-plan-form").addEventListener("input", () => {
+  const cropForm = $("#crop-plan-form");
+  cropForm.addEventListener("input", () => {
     save(
       "agriforesight-crop-draft-v1",
-      Object.fromEntries(new FormData($("#crop-plan-form"))),
+      Object.fromEntries(new FormData(cropForm)),
     );
   });
   const draft = read("agriforesight-crop-draft-v1", {});
   for (const [key, value] of Object.entries(draft))
-    if ($("#crop-plan-form").elements[key])
-      $("#crop-plan-form").elements[key].value = value;
+    if (cropForm.elements.namedItem(key))
+      cropForm.elements.namedItem(key).value = value;
   const savedPlan = read("agriforesight-crop-plan-v1", null);
-  cropTools.hidden = !savedPlan && !Object.keys(draft).length;
-  if (savedPlan)
-    $("#crop-plan-result").replaceChildren(
-      el("h2", savedPlan.previous_crop + " → " + savedPlan.crop),
-      el("p", savedPlan.note),
-      makeTable(
-        ["When", "What to do"],
-        savedPlan.calendar.map((d) => [d.date, d.task]),
-      ),
-    );
+  if (savedPlan) renderCropPlan(savedPlan);
+  registerPageView("planting", () => {
+    if (state?.farm && !read("agriforesight-crop-draft-v1", null))
+      cropForm.elements.previous_crop.value = state.farm.crop;
+  });
 
   const journal = $("#journal");
   journal.classList.add("workspace-panel");

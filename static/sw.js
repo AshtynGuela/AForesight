@@ -1,5 +1,11 @@
-const CACHE = "agriforesight-shell-v49-dashboard-tips";
+const CACHE = "agriforesight-shell-v50-crop-plans";
 const FILES = [
+  "/static/planning-assets/top.svg",
+  "/static/planning-assets/middle.svg",
+  "/static/planning-assets/pair.svg",
+  "/static/planning-assets/drain.svg",
+  "/static/planning-assets/down.svg",
+  "/static/planning-assets/submit.svg",
   "/static/dashboard-tips.js",
   "/static/journal-photos.js",
   "/static/journal-assets/result-good.svg",

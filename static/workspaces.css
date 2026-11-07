@@ -22,8 +22,8 @@ body:is([data-page="planting"], [data-page="journal"])::before {
   content: "";
   position: fixed;
   inset: 0 0 0 597px;
-  background: #233522 url("/static/planning-assets/tea-harvest.jpg") center
-    52% / cover no-repeat;
+  background: #233522 url("/static/planning-assets/tea-harvest.jpg") left 0
+    bottom -20px / max(966px, 100%, calc(100dvh * 0.7)) auto no-repeat;
   z-index: 0;
 }
 body[data-page="journal"]::before {
@@ -111,46 +111,191 @@ body:is([data-page="planting"], [data-page="journal"]) #offline:not([hidden]) {
     monospace;
   border-radius: 10px;
 }
+#planting {
+  width: 561px;
+  padding: 64px 60px 34px 31px;
+  container: crop-plans / inline-size;
+}
+#planting .cp-intro {
+  max-width: 506px;
+  margin: 0 0 4px;
+  font-size: 16px;
+  line-height: 1.35;
+}
+#planting .cp-choice,
+#planting .cp-comparison,
+#planting .cp-calendar,
+#planting #crop-plan-result {
+  width: 470px;
+  max-width: 100%;
+}
 #planting .cp-choice {
-  min-height: 215px;
-  margin-right: 18px;
+  margin: 0 0 48px;
+  padding: 16px 20px 8px;
 }
-#planting > p {
-  margin-bottom: 3px;
+#planting .cp-choice label {
+  display: block;
+  margin: 0;
+  line-height: 16px;
 }
-#planting .cp-choice .cp-drainage {
-  font-size: 11px;
-}
-#planting .cp-choice p {
-  font-size: 11px;
-  line-height: 1.6;
-  margin: 8px 0;
+#planting .cp-choice select {
+  height: 43px;
+  margin-top: 6px;
 }
 #planting .cp-choice button {
-  width: 100%;
-  margin-top: 8px;
+  margin-top: 6px;
   background: #22633a;
+  font-weight: 700;
 }
-#planting .cp-calendar > summary {
+#planting select {
+  background-image: url("/static/planning-assets/down.svg");
+  background-position: right 13px center;
+  background-size: auto;
+}
+#planting .cp-timing {
+  display: flex;
+  align-items: center;
+  min-height: 46px;
+  margin: 0 0 4px;
+  padding: 8px 16px;
+  border-radius: 24px;
+  background: #d5e4cc;
   font-size: 12px;
-  min-height: 44px;
-  line-height: 1.6;
+  line-height: 1.4;
 }
-#planting .form-grid {
-  grid-template-columns: 1fr;
-  gap: 16px;
+#planting .cp-timing:has(+ .cp-inputs[hidden]) {
+  margin-bottom: 23px;
 }
+#planting .cp-inputs {
+  margin: 0 0 4px;
+  font-size: 11px;
+  line-height: 15px;
+}
+#planting .cp-results {
+  min-height: 282px;
+  margin: 0 0 7px;
+  padding: 14px 24px;
+}
+#planting .cp-results details {
+  margin: 0;
+}
+#planting .cp-results > details > summary,
+#planting .cp-calendar > summary {
+  list-style: none;
+  color: #262626;
+}
+#planting #crop-comparison-details > summary::after,
+#planting .cp-calendar > summary::after {
+  content: url("/static/planning-assets/down.svg");
+  display: inline-block;
+  margin-left: 10px;
+}
+#planting #crop-comparison-details > summary {
+  padding: 3px 0 8px;
+  font-size: 11px;
+}
+#planting #crop-comparison-basis,
 #planting #crop-suggestions {
   font:
-    13px/1.7 "Segoe UI",
+    13px/1.6 "Segoe UI",
     sans-serif;
 }
 #planting #crop-suggestions h2 {
-  font-size: 21px;
+  margin-top: 0;
+  font-size: 19px;
+  text-transform: capitalize;
 }
 #planting #crop-suggestions .panel {
+  margin: 12px 0 0;
   background: #f4f4f4;
   border-radius: 18px;
+}
+#planting .cp-calendar {
+  margin: 0 0 16px;
+  padding: 8px 40px 16px 20px;
+}
+#planting .cp-calendar > summary {
+  padding: 4px 0 10px;
+  text-align: center;
+  font-size: 12px;
+}
+#planting .cp-field-row {
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: end;
+  gap: 14px;
+  margin-bottom: 10px;
+}
+#planting .cp-field-row label {
+  display: block;
+  margin: 0;
+}
+#planting .cp-field-row :is(select, input) {
+  min-width: 0;
+  margin-top: 3px;
+  padding-left: 11px;
+}
+#planting input[type="date"] {
+  background-image: url("/static/journal-assets/calendar.svg");
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+  background-size: auto;
+}
+#planting input[type="date"]::-webkit-calendar-picker-indicator {
+  opacity: 0;
+  cursor: pointer;
+}
+#planting .cp-plan-submit {
+  width: 100%;
+  padding-inline: 8px;
+  background: #22633a;
+  font-weight: 700;
+}
+#planting #crop-duration-help {
+  margin: 6px 0 0;
+  font-size: 10px;
+}
+
+/* Keep the Figma artwork at its original size behind native controls. */
+@container crop-plans (min-width: 470px) {
+  #planting .cp-choice {
+    overflow: hidden;
+    background: url("/static/planning-assets/top.svg") top left no-repeat;
+    box-shadow: none;
+  }
+  #planting .cp-choice select {
+    background: transparent;
+    box-shadow: none;
+  }
+  #planting .cp-choice button {
+    width: 170px;
+    margin-top: -4px;
+    padding: 0;
+    background: transparent;
+    font-size: 11px;
+  }
+  #planting .cp-timing:has(+ .cp-inputs[hidden]) {
+    background: url("/static/planning-assets/middle.svg") center top no-repeat;
+  }
+  #planting .cp-field-row:nth-child(-n + 2) {
+    background: url("/static/planning-assets/pair.svg") left bottom no-repeat;
+  }
+  #planting .cp-field-row :is(select, input) {
+    height: 37px;
+    min-height: 37px;
+    background-color: transparent;
+    box-shadow: none;
+  }
+  #planting .cp-plan-drainage select {
+    background:
+      url("/static/planning-assets/down.svg") right 13px center no-repeat,
+      url("/static/planning-assets/drain.svg") left bottom no-repeat;
+  }
+  #planting .cp-plan-submit {
+    background: url("/static/planning-assets/submit.svg") -11.21px -4.21px
+      no-repeat;
+  }
 }
 #journal {
   padding: 71px 48px 32px 38px;
@@ -587,6 +732,9 @@ body:is([data-page="planting"], [data-page="journal"]) #offline:not([hidden]) {
     width: 100%;
     border-radius: 0;
   }
+  #planting {
+    width: 100%;
+  }
 }
 @media (max-width: 550px) {
   .workspace-panel,
@@ -620,7 +768,23 @@ body:is([data-page="planting"], [data-page="journal"]) #offline:not([hidden]) {
   .wj-photo-dialog {
     padding: 16px;
   }
+  #planting {
+    padding: 26px 18px 90px;
+  }
   #planting .cp-choice {
-    margin-right: 0;
+    margin-bottom: 22px;
+  }
+  #planting .cp-calendar {
+    padding-inline: 16px;
+  }
+  #planting .cp-field-row {
+    gap: 10px;
+  }
+  #planting .cp-field-row :is(select, input) {
+    min-height: 44px;
+    font-size: 12px;
+  }
+  #planting .cp-plan-submit {
+    font-size: 11px;
   }
 }
