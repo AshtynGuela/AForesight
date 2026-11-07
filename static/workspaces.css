@@ -1,24 +1,34 @@
 /* Desktop 4 Crop Plans and the completed Field Journal frame (107:338). */
-body:is([data-page="planting"], [data-page="journal"]) {
+body:is([data-page="planting"], [data-page="journal"], [data-page="learn"]) {
   background: #fff;
   color: #262626;
 }
-body:is([data-page="planting"], [data-page="journal"]) > header,
-body:is([data-page="planting"], [data-page="journal"]) .context-toolbar,
-body:is([data-page="planting"], [data-page="journal"]) #period-panel,
-body:is([data-page="planting"], [data-page="journal"]) footer {
+body:is([data-page="planting"], [data-page="journal"], [data-page="learn"])
+  > header,
+body:is([data-page="planting"], [data-page="journal"], [data-page="learn"])
+  .context-toolbar,
+body:is([data-page="planting"], [data-page="journal"], [data-page="learn"])
+  #period-panel,
+body:is([data-page="planting"], [data-page="journal"], [data-page="learn"])
+  footer {
   display: none;
 }
-body:is([data-page="planting"], [data-page="journal"]) .layout {
+body:is([data-page="planting"], [data-page="journal"], [data-page="learn"])
+  .layout {
   max-width: none;
   min-height: 100dvh;
 }
-body:is([data-page="planting"], [data-page="journal"]) main {
+body:is([data-page="planting"], [data-page="journal"], [data-page="learn"])
+  main {
   padding: 0;
   max-width: none;
   position: relative;
 }
-body:is([data-page="planting"], [data-page="journal"])::before {
+body:is(
+    [data-page="planting"],
+    [data-page="journal"],
+    [data-page="learn"]
+  )::before {
   content: "";
   position: fixed;
   inset: 0 0 0 597px;
@@ -34,8 +44,10 @@ body[data-page="journal"]::before {
     100% no-repeat;
   transform: scaleX(-1);
 }
-body:is([data-page="planting"], [data-page="journal"]) #notice:not(:empty),
-body:is([data-page="planting"], [data-page="journal"]) #offline:not([hidden]) {
+body:is([data-page="planting"], [data-page="journal"], [data-page="learn"])
+  #notice:not(:empty),
+body:is([data-page="planting"], [data-page="journal"], [data-page="learn"])
+  #offline:not([hidden]) {
   position: relative;
   max-width: 557px;
   background: #eee8d8;
@@ -130,6 +142,7 @@ body:is([data-page="planting"], [data-page="journal"]) #offline:not([hidden]) {
   max-width: 100%;
 }
 #planting .cp-choice {
+  min-height: 129px;
   margin: 0 0 48px;
   padding: 16px 20px 8px;
 }
@@ -143,6 +156,7 @@ body:is([data-page="planting"], [data-page="journal"]) #offline:not([hidden]) {
   margin-top: 6px;
 }
 #planting .cp-choice button {
+  min-height: 44px;
   margin-top: 6px;
   background: #22633a;
   font-weight: 700;
@@ -725,7 +739,11 @@ body:is([data-page="planting"], [data-page="journal"]) #offline:not([hidden]) {
   margin: 0 0 10px;
 }
 @media (max-width: 800px) {
-  body:is([data-page="planting"], [data-page="journal"])::before {
+  body:is(
+      [data-page="planting"],
+      [data-page="journal"],
+      [data-page="learn"]
+    )::before {
     display: none;
   }
   .workspace-panel {
@@ -786,5 +804,120 @@ body:is([data-page="planting"], [data-page="journal"]) #offline:not([hidden]) {
   }
   #planting .cp-plan-submit {
     font-size: 11px;
+  }
+}
+
+/* Methods & Sources, Figma frame 173:284. */
+body[data-page="learn"]::before {
+  inset: 0 0 0 152px;
+  background: #344e25 url("/static/methods-assets/rice-field.png")
+    left -1745px / 2268px 4032px no-repeat;
+}
+#learn {
+  width: 560px;
+  padding: 76px 13px 31px 32px;
+  color: #000;
+}
+#learn .methods-title {
+  margin: 0 0 30px 24px;
+  font-size: 26px;
+  font-weight: 700;
+  line-height: 34px;
+}
+#learn h1 {
+  margin: 0 0 17px 6px;
+  font-size: 30px;
+  font-weight: 500;
+  line-height: 45px;
+}
+#learn .methods-card {
+  min-height: 269px;
+  padding: 56px 24px 26px;
+  margin-bottom: 33px;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1.35;
+}
+#learn .methods-card + .methods-card {
+  min-height: 242px;
+  margin-bottom: 27px;
+}
+#learn .methods-card + .methods-card p + p {
+  margin-top: 46px;
+}
+#learn .methods-card p {
+  margin: 10px 0 0;
+  line-height: 1.35;
+}
+#learn .methods-card-heading {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+}
+#learn .methods-references {
+  margin-bottom: 0;
+  min-height: 220px;
+  padding: 20px 24px;
+  background:
+    url("/static/methods-assets/references.svg") left top no-repeat,
+    linear-gradient(transparent 220px, #00000014 220px);
+  font-size: 11px;
+  line-height: 1.5;
+}
+#learn .methods-references h2 {
+  font-size: 19px;
+  margin: 0 0 14px;
+}
+#learn .methods-references ul {
+  padding-left: 18px;
+}
+#learn .methods-references li {
+  margin-bottom: 8px;
+}
+#learn .methods-references .source {
+  font-size: 11px;
+}
+#learn .methods-links > summary {
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  color: #215b43;
+  cursor: pointer;
+}
+#learn .methods-links > summary::before {
+  content: "+";
+  margin-right: 8px;
+}
+#learn .methods-links[open] > summary::before {
+  content: "-";
+}
+#learn .methods-links a {
+  font-size: inherit;
+}
+@media (max-width: 800px) {
+  #learn {
+    width: 100%;
+  }
+  body[data-page="learn"]::before {
+    display: none;
+  }
+}
+@media (max-width: 550px) {
+  #learn {
+    padding: 26px 18px 90px;
+  }
+  #learn .methods-title {
+    margin-left: 0;
+    font-size: 22px;
+  }
+  #learn .methods-card {
+    padding: 24px;
+    font-size: 14px;
+  }
+  #learn .methods-references,
+  #learn .methods-references .source {
+    font-size: 13px;
   }
 }

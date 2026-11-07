@@ -19,9 +19,13 @@
   for (const [key, value] of Object.entries(draft))
     if (cropForm.elements.namedItem(key))
       cropForm.elements.namedItem(key).value = value;
-  const savedPlan = read("agriforesight-crop-plan-v1", null);
-  if (savedPlan) renderCropPlan(savedPlan);
+  // A new crop needs its own variety duration.
+  cropForm.elements.crop.addEventListener("change", () => {
+    cropForm.elements.duration.value = "";
+    cropForm.dispatchEvent(new Event("input", { bubbles: true }));
+  });
   registerPageView("planting", () => {
+    restoreCropResults();
     if (state?.farm && !read("agriforesight-crop-draft-v1", null))
       cropForm.elements.previous_crop.value = state.farm.crop;
   });

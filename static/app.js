@@ -1784,62 +1784,136 @@ $("#crop-plan-form").onsubmit = (e) => {
       "/api/crop-plan",
       Object.fromEntries(new FormData(form)),
     );
-    save("agriforesight-crop-plan-v1", r);
     renderCropPlan(r);
+    saveCropResult("agriforesight-crop-plan-v1", r);
     if (document.body.dataset.page === "planting")
       $("#crop-plan-result").scrollIntoView({ block: "nearest" });
   });
 };
 
 $("#suggest-crops").onclick = (e) =>
-  run(e.target, async () => {
+  run(e.currentTarget, async () => {
     const r = await api("/api/crop-suggestions", {
       drainage: $("#suggest-drainage").value,
     });
-    const box = $("#crop-suggestions");
-    $("#crop-comparison-timing").textContent = r.timing;
-    const inputs = $("#crop-comparison-inputs");
-    inputs.textContent = `Using: ${r.inputs.previous_crop} → ${r.inputs.current_crop} → next crop · ${r.inputs.terrain} · ${r.inputs.water}. ${r.inputs.forecast_days_used} usable forecast days.`;
-    inputs.hidden = false;
-    box.replaceChildren();
-    if (r.warning) box.append(el("p", r.warning, "context-note"));
-    for (const option of r.options) {
-      const card = el("article", undefined, "panel");
-      card.append(el("h2", option.crop), el("span", option.status, "pill"));
-      option.reasons.forEach((t) => card.append(el("p", t)));
-      const details = el("details");
-      details.append(el("summary", "What to check first"));
-      option.cautions.forEach((t) => details.append(el("p", t)));
-      card.append(details);
-      const choose = el(
-        "button",
-        "Use this crop in a draft calendar",
-        "secondary",
-      );
-      choose.disabled = option.blocked;
-      choose.onclick = () => {
-        const f = $("#crop-plan-form");
-        f.elements.crop.value = option.crop;
-        f.elements.previous_crop.value = r.inputs.current_crop;
-        f.elements.drainage.value = r.inputs.drainage;
-        $("#planting .cp-calendar").open = true;
-        f.dispatchEvent(new Event("input", { bubbles: true }));
-        f.scrollIntoView({ behavior: "smooth" });
-        f.elements.start.focus({ preventScroll: true });
-      };
-      card.append(choose);
-      box.append(card);
-    }
-    const detail = $("#crop-comparison-basis");
-    detail.replaceChildren(el("p", r.method));
-    r.missing.forEach((t) => detail.append(el("p", t)));
-    for (const source of r.sources) {
-      const p = el("p"),
-        a = el("a", source.title);
-      a.href = source.url;
-      a.target = "_blank";
-      a.rel = "noreferrer";
-      p.append(a);
-      detail.append(p);
-    }
+    renderCropSuggestions(r);
+    saveCropResult("agriforesight-crop-comparison-v1", r);
   });
+
+function renderCropSuggestions(r) {
+  const box = $("#crop-suggestions");
+  $("#crop-comparison-timing").textContent = r.timing;
+  const inputs = $("#crop-comparison-inputs");
+  inputs.textContent = `Using: ${r.inputs.previous_crop} → ${r.inputs.current_crop} → next crop · ${r.inputs.terrain} · ${r.inputs.water}. ${r.inputs.forecast_days_used} usable forecast days.`;
+  inputs.hidden = false;
+  box.replaceChildren();
+  if (r.warning) box.append(el("p", r.warning, "context-note"));
+  for (const option of r.options) {
+    const card = el("article", undefined, "panel");
+    card.append(el("h2", option.crop), el("span", option.status, "pill"));
+    option.reasons.forEach((t) => card.append(el("p", t)));
+    const details = el("details");
+    details.append(el("summary", "What to check first"));
+    option.cautions.forEach((t) => details.append(el("p", t)));
+    card.append(details);
+    const choose = el(
+      "button",
+      "Use this crop in a draft calendar",
+      "secondary",
+    );
+    choose.disabled = option.blocked;
+    choose.onclick = () => {
+      const f = $("#crop-plan-form");
+      if (f.elements.crop.value !== option.crop) f.elements.duration.value = "";
+      f.elements.crop.value = option.crop;
+      f.elements.previous_crop.value = r.inputs.current_crop;
+      f.elements.drainage.value = r.inputs.drainage;
+      $("#planting .cp-calendar").open = true;
+      f.dispatchEvent(new Event("input", { bubbles: true }));
+      f.scrollIntoView({ behavior: "smooth" });
+      f.elements.start.focus({ preventScroll: true });
+    };
+    card.append(choose);
+    box.append(card);
+  }
+  const detail = $("#crop-comparison-basis");
+  detail.replaceChildren(el("p", r.method));
+  r.missing.forEach((t) => detail.append(el("p", t)));
+  for (const source of r.sources) {
+    const p = el("p"),
+      a = el("a", source.title);
+    a.href = source.url;
+    a.target = "_blank";
+    a.rel = "noreferrer";
+    p.append(a);
+    detail.append(p);
+  }
+}
+
+// Retain a visible snapshot without presenting an old farm's result as current.
+function saveCropResult(key, result) {
+  try {
+    save(key, {
+      ...result,
+      saved_at: new Date().toISOString(),
+      saved_farm: state?.farm,
+    });
+  } catch {
+    notice(
+      "Your result is ready, but this device couldn't save it for offline use.",
+      true,
+    );
+  }
+}
+function restoreCropResults() {
+  for (const [key, selector, render] of [
+    ["agriforesight-crop-plan-v1", "#crop-plan-result", renderCropPlan],
+    [
+      "agriforesight-crop-comparison-v1",
+      "#crop-suggestions",
+      renderCropSuggestions,
+    ],
+  ]) {
+    const saved = read(key, null);
+    if (!saved) continue;
+    if (
+      saved.saved_farm &&
+      JSON.stringify(saved.saved_farm) !== JSON.stringify(state?.farm)
+    ) {
+      if (selector === "#crop-plan-result") $(selector).hidden = true;
+      else {
+        $(selector).replaceChildren(
+          el(
+            "p",
+            "Your farm details changed. Compare crops again for this field.",
+          ),
+        );
+        $("#crop-comparison-timing").textContent = "Compare your updated farm";
+        $("#crop-comparison-inputs").hidden = true;
+        $("#crop-comparison-basis").replaceChildren();
+      }
+      continue;
+    }
+    if (selector === "#crop-plan-result" && !Array.isArray(saved.calendar))
+      continue;
+    if (
+      selector === "#crop-suggestions" &&
+      (!Array.isArray(saved.options) || !saved.inputs)
+    )
+      continue;
+    const date = saved.saved_at
+      ? new Date(saved.saved_at).toLocaleString("en-PH", {
+          timeZone: "Asia/Manila",
+        })
+      : "an earlier visit";
+    render({
+      ...saved,
+      warning: `Saved result from ${date}. Recheck your farm details and weather before planting.`,
+    });
+    if (selector === "#crop-suggestions") {
+      $("#suggest-drainage").value = saved.inputs.drainage || "unknown";
+      $("#crop-comparison-timing").textContent =
+        "Saved crop comparison · update for today's conditions";
+    }
+  }
+}

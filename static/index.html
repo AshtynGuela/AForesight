@@ -827,17 +827,17 @@
             Export my records (JSON)
           </button>
         </section>
-        <section id="learn" class="page" hidden>
-          <div class="eyebrow">METHODS & SOURCES</div>
+        <section id="learn" class="page workspace-panel" hidden>
+          <div class="methods-title">METHODS &amp; SOURCES</div>
           <h1>How this works</h1>
-          <div class="panel">
-            <h2>Forecasts</h2>
+          <div class="panel methods-card">
+            <h2 class="methods-card-heading">Forecasts</h2>
             <p>
               The app uses your saved weather to estimate daily rain and average
               temperature. It tries regression and a 14-day average on earlier
-              dates, then checks the chosen method on later dates. Local station
-              readings are only included if you import them. Open-Meteo uses
-              weather models with more atmospheric information.
+              dates, then checks the chosen method on later dates. Unverified
+              weather uploads are disabled. Open-Meteo uses weather models with
+              more atmospheric information.
             </p>
             <p>
               Compare the same dates, location and weather measurement. We don’t
@@ -846,13 +846,12 @@
               RMSE still use all usable days.
             </p>
           </div>
-          <div class="panel">
-            <h2>Data and field records</h2>
+          <div class="panel methods-card">
+            <h2 class="methods-card-heading">Data and field records</h2>
             <p>
-              The Legazpi and Naga samples come from NASA POWER, with their
-              dates and download details kept. Made-up examples are labelled.
-              Your notes are saved for later study; they don’t feed the
-              forecasts or advice.
+              Past weather comes from NASA POWER or Open-Meteo, with its source
+              and dates kept. Missing readings stay missing. Your notes are
+              saved for later study; they don’t feed the forecasts or advice.
             </p>
             <p>
               The location lookup uses saved geoBoundaries maps from 2020 to
@@ -861,53 +860,56 @@
               server.
             </p>
           </div>
-          <div class="panel">
+          <div class="panel methods-references">
             <h2>Agricultural references</h2>
-            <ul>
-              <li>
-                <a
-                  href="https://www.philrice.gov.ph/water-saving-practices-advised-as-el-nino-threat-looms/"
-                  target="_blank"
-                  rel="noreferrer"
-                  >DA-PhilRice: water management and critical rice stages</a
-                >
-              </li>
-              <li>
-                <a
-                  href="https://www.fao.org/4/x0490e/x0490e0e.htm"
-                  target="_blank"
-                  rel="noreferrer"
-                  >FAO 56: soil-water availability and water balance</a
-                >
-              </li>
-              <li>
-                <a
-                  href="https://www.pagasa.dost.gov.ph/ten-day-regional-agri-weather"
-                  target="_blank"
-                  rel="noreferrer"
-                  >PAGASA: regional agricultural weather</a
-                >
-              </li>
-              <li>
-                <a
-                  href="https://www.bswm.da.gov.ph/process/laboratory-services/"
-                  target="_blank"
-                  rel="noreferrer"
-                  >BSWM: soil testing and laboratory services</a
-                >
-              </li>
-              <li>
-                <a href="https://sarai.ph/" target="_blank" rel="noreferrer"
-                  >Project SARAi portal</a
-                >
-                · reference only; no data integration
-              </li>
-            </ul>
-            <p class="source">
-              These are things to check in the field. The app’s weather cutoffs
-              are starting points for review, not official warnings or locally
-              tested crop limits.
-            </p>
+            <details class="methods-links">
+              <summary>View references</summary>
+              <ul>
+                <li>
+                  <a
+                    href="https://www.philrice.gov.ph/water-saving-practices-advised-as-el-nino-threat-looms/"
+                    target="_blank"
+                    rel="noreferrer"
+                    >DA-PhilRice: water management and critical rice stages</a
+                  >
+                </li>
+                <li>
+                  <a
+                    href="https://www.fao.org/4/x0490e/x0490e0e.htm"
+                    target="_blank"
+                    rel="noreferrer"
+                    >FAO 56: soil-water availability and water balance</a
+                  >
+                </li>
+                <li>
+                  <a
+                    href="https://www.pagasa.dost.gov.ph/ten-day-regional-agri-weather"
+                    target="_blank"
+                    rel="noreferrer"
+                    >PAGASA: regional agricultural weather</a
+                  >
+                </li>
+                <li>
+                  <a
+                    href="https://www.bswm.da.gov.ph/process/laboratory-services/"
+                    target="_blank"
+                    rel="noreferrer"
+                    >BSWM: soil testing and laboratory services</a
+                  >
+                </li>
+                <li>
+                  <a href="https://sarai.ph/" target="_blank" rel="noreferrer"
+                    >Project SARAi portal</a
+                  >
+                  · reference only; no data integration
+                </li>
+              </ul>
+              <p class="source">
+                These are things to check in the field. The app’s weather
+                cutoffs are starting points for review, not official warnings or
+                locally tested crop limits.
+              </p>
+            </details>
           </div>
         </section>
         <footer>AgriForesight · Farm planning research prototype · v0.4</footer>

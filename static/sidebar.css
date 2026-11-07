@@ -4,7 +4,8 @@ body:is(
     [data-page="farm"],
     [data-page="forecasts"],
     [data-page="planting"],
-    [data-page="journal"]
+    [data-page="journal"],
+    [data-page="learn"]
   )
   .layout {
   grid-template-columns: 96px minmax(0, 1fr);
@@ -14,7 +15,8 @@ body:is(
     [data-page="farm"],
     [data-page="forecasts"],
     [data-page="planting"],
-    [data-page="journal"]
+    [data-page="journal"],
+    [data-page="learn"]
   )
   aside {
   position: sticky;
@@ -40,7 +42,8 @@ body:is(
     [data-page="farm"],
     [data-page="forecasts"],
     [data-page="planting"],
-    [data-page="journal"]
+    [data-page="journal"],
+    [data-page="learn"]
   )
   aside:is(:hover, :has(:focus-visible)) {
   width: 260px;
@@ -50,7 +53,8 @@ body:is(
     [data-page="farm"],
     [data-page="forecasts"],
     [data-page="planting"],
-    [data-page="journal"]
+    [data-page="journal"],
+    [data-page="learn"]
   )
   .ov-brand,
 body:is(
@@ -58,7 +62,8 @@ body:is(
     [data-page="farm"],
     [data-page="forecasts"],
     [data-page="planting"],
-    [data-page="journal"]
+    [data-page="journal"],
+    [data-page="learn"]
   )
   .aside-note {
   display: none;
@@ -68,7 +73,8 @@ body:is(
     [data-page="farm"],
     [data-page="forecasts"],
     [data-page="planting"],
-    [data-page="journal"]
+    [data-page="journal"],
+    [data-page="learn"]
   )
   .mf-brand {
   display: flex;
@@ -87,7 +93,8 @@ body:is(
     [data-page="farm"],
     [data-page="forecasts"],
     [data-page="planting"],
-    [data-page="journal"]
+    [data-page="journal"],
+    [data-page="learn"]
   )
   .mf-brand
   img {
@@ -104,7 +111,8 @@ body:is(
     [data-page="farm"],
     [data-page="forecasts"],
     [data-page="planting"],
-    [data-page="journal"]
+    [data-page="journal"],
+    [data-page="learn"]
   )
   nav {
   display: flex;
@@ -120,7 +128,8 @@ body:is(
     [data-page="farm"],
     [data-page="forecasts"],
     [data-page="planting"],
-    [data-page="journal"]
+    [data-page="journal"],
+    [data-page="learn"]
   )
   nav
   button {
@@ -141,7 +150,8 @@ body:is(
     [data-page="farm"],
     [data-page="forecasts"],
     [data-page="planting"],
-    [data-page="journal"]
+    [data-page="journal"],
+    [data-page="learn"]
   )
   nav
   button.selected {
@@ -153,7 +163,8 @@ body:is(
     [data-page="farm"],
     [data-page="forecasts"],
     [data-page="planting"],
-    [data-page="journal"]
+    [data-page="journal"],
+    [data-page="learn"]
   )
   .ov-nav-icon {
   display: block;
@@ -169,7 +180,8 @@ body:is(
     [data-page="farm"],
     [data-page="forecasts"],
     [data-page="planting"],
-    [data-page="journal"]
+    [data-page="journal"],
+    [data-page="learn"]
   )
   .ov-nav-caption {
   display: block;
@@ -189,7 +201,8 @@ body:is(
     [data-page="farm"],
     [data-page="forecasts"],
     [data-page="planting"],
-    [data-page="journal"]
+    [data-page="journal"],
+    [data-page="learn"]
   )
   aside:is(:hover, :has(:focus-visible))
   .ov-nav-caption {
@@ -201,7 +214,8 @@ body:is(
     [data-page="farm"],
     [data-page="forecasts"],
     [data-page="planting"],
-    [data-page="journal"]
+    [data-page="journal"],
+    [data-page="learn"]
   )
   nav
   [data-tab="overview"] {
@@ -212,7 +226,8 @@ body:is(
     [data-page="farm"],
     [data-page="forecasts"],
     [data-page="planting"],
-    [data-page="journal"]
+    [data-page="journal"],
+    [data-page="learn"]
   )
   nav
   [data-tab="farm"] {
@@ -223,7 +238,8 @@ body:is(
     [data-page="farm"],
     [data-page="forecasts"],
     [data-page="planting"],
-    [data-page="journal"]
+    [data-page="journal"],
+    [data-page="learn"]
   )
   nav
   [data-tab="forecasts"] {
@@ -234,7 +250,8 @@ body:is(
     [data-page="farm"],
     [data-page="forecasts"],
     [data-page="planting"],
-    [data-page="journal"]
+    [data-page="journal"],
+    [data-page="learn"]
   )
   nav
   [data-tab="planting"] {
@@ -245,7 +262,8 @@ body:is(
     [data-page="farm"],
     [data-page="forecasts"],
     [data-page="planting"],
-    [data-page="journal"]
+    [data-page="journal"],
+    [data-page="learn"]
   )
   nav
   [data-tab="journal"] {
@@ -256,7 +274,8 @@ body:is(
     [data-page="farm"],
     [data-page="forecasts"],
     [data-page="planting"],
-    [data-page="journal"]
+    [data-page="journal"],
+    [data-page="learn"]
   )
   nav
   [data-tab="learn"] {
@@ -267,7 +286,8 @@ body:is(
     [data-page="farm"],
     [data-page="forecasts"],
     [data-page="planting"],
-    [data-page="journal"]
+    [data-page="journal"],
+    [data-page="learn"]
   )
   nav
   [data-tab="climate"] {
@@ -278,7 +298,8 @@ body:is(
     [data-page="farm"],
     [data-page="forecasts"],
     [data-page="planting"],
-    [data-page="journal"]
+    [data-page="journal"],
+    [data-page="learn"]
   )
   .mf-support {
   display: flex;
@@ -296,7 +317,8 @@ body:is(
     [data-page="farm"],
     [data-page="forecasts"],
     [data-page="planting"],
-    [data-page="journal"]
+    [data-page="journal"],
+    [data-page="learn"]
   )
   .mf-support
   img {
@@ -307,7 +329,8 @@ body:is(
     [data-page="farm"],
     [data-page="forecasts"],
     [data-page="planting"],
-    [data-page="journal"]
+    [data-page="journal"],
+    [data-page="learn"]
   )
   aside:has(:focus-visible) {
   overflow: visible;
@@ -318,7 +341,8 @@ body:is(
       [data-page="farm"],
       [data-page="forecasts"],
       [data-page="planting"],
-      [data-page="journal"]
+      [data-page="journal"],
+      [data-page="learn"]
     )
     aside,
   body:is(
@@ -326,7 +350,8 @@ body:is(
       [data-page="farm"],
       [data-page="forecasts"],
       [data-page="planting"],
-      [data-page="journal"]
+      [data-page="journal"],
+      [data-page="learn"]
     )
     .ov-nav-caption {
     transition: none;
@@ -338,7 +363,8 @@ body:is(
       [data-page="farm"],
       [data-page="forecasts"],
       [data-page="planting"],
-      [data-page="journal"]
+      [data-page="journal"],
+      [data-page="learn"]
     )
     .layout {
     grid-template-columns: minmax(0, 1fr);
@@ -348,7 +374,8 @@ body:is(
       [data-page="farm"],
       [data-page="forecasts"],
       [data-page="planting"],
-      [data-page="journal"]
+      [data-page="journal"],
+      [data-page="learn"]
     )
     aside,
   body:is(
@@ -356,7 +383,8 @@ body:is(
       [data-page="farm"],
       [data-page="forecasts"],
       [data-page="planting"],
-      [data-page="journal"]
+      [data-page="journal"],
+      [data-page="learn"]
     )
     aside:is(:hover, :has(:focus-visible)) {
     position: static;
@@ -372,7 +400,8 @@ body:is(
       [data-page="farm"],
       [data-page="forecasts"],
       [data-page="planting"],
-      [data-page="journal"]
+      [data-page="journal"],
+      [data-page="learn"]
     )
     .mf-brand {
     display: none;
@@ -382,7 +411,8 @@ body:is(
       [data-page="farm"],
       [data-page="forecasts"],
       [data-page="planting"],
-      [data-page="journal"]
+      [data-page="journal"],
+      [data-page="learn"]
     )
     nav {
     flex-direction: row;
@@ -395,7 +425,8 @@ body:is(
       [data-page="farm"],
       [data-page="forecasts"],
       [data-page="planting"],
-      [data-page="journal"]
+      [data-page="journal"],
+      [data-page="learn"]
     )
     nav
     button {
@@ -410,7 +441,8 @@ body:is(
       [data-page="farm"],
       [data-page="forecasts"],
       [data-page="planting"],
-      [data-page="journal"]
+      [data-page="journal"],
+      [data-page="learn"]
     )
     .ov-nav-icon {
     padding: 6px;
@@ -422,7 +454,8 @@ body:is(
       [data-page="farm"],
       [data-page="forecasts"],
       [data-page="planting"],
-      [data-page="journal"]
+      [data-page="journal"],
+      [data-page="learn"]
     )
     .ov-nav-caption {
     display: none;
@@ -432,7 +465,8 @@ body:is(
       [data-page="farm"],
       [data-page="forecasts"],
       [data-page="planting"],
-      [data-page="journal"]
+      [data-page="journal"],
+      [data-page="learn"]
     )
     .mf-support {
     margin: 0;
@@ -446,7 +480,8 @@ body:is(
       [data-page="farm"],
       [data-page="forecasts"],
       [data-page="planting"],
-      [data-page="journal"]
+      [data-page="journal"],
+      [data-page="learn"]
     )
     .layout {
     grid-template-columns: 260px minmax(0, 1fr);
@@ -456,7 +491,8 @@ body:is(
       [data-page="farm"],
       [data-page="forecasts"],
       [data-page="planting"],
-      [data-page="journal"]
+      [data-page="journal"],
+      [data-page="learn"]
     )
     aside {
     width: 260px;
@@ -466,7 +502,8 @@ body:is(
       [data-page="farm"],
       [data-page="forecasts"],
       [data-page="planting"],
-      [data-page="journal"]
+      [data-page="journal"],
+      [data-page="learn"]
     )
     .ov-nav-caption {
     opacity: 1;
@@ -480,7 +517,8 @@ body:is(
     [data-page="farm"],
     [data-page="forecasts"],
     [data-page="planting"],
-    [data-page="journal"]
+    [data-page="journal"],
+    [data-page="learn"]
   )
   .mf-brand
   .mf-logo-compact {
@@ -491,7 +529,8 @@ body:is(
     [data-page="farm"],
     [data-page="forecasts"],
     [data-page="planting"],
-    [data-page="journal"]
+    [data-page="journal"],
+    [data-page="learn"]
   )
   .mf-brand
   .mf-logo-expanded {
@@ -502,7 +541,8 @@ body:is(
     [data-page="farm"],
     [data-page="forecasts"],
     [data-page="planting"],
-    [data-page="journal"]
+    [data-page="journal"],
+    [data-page="learn"]
   )
   aside:is(:hover, :has(:focus-visible))
   .mf-logo-compact {
@@ -513,7 +553,8 @@ body:is(
     [data-page="farm"],
     [data-page="forecasts"],
     [data-page="planting"],
-    [data-page="journal"]
+    [data-page="journal"],
+    [data-page="learn"]
   )
   aside:is(:hover, :has(:focus-visible))
   .mf-logo-expanded {
@@ -525,7 +566,8 @@ body:is(
       [data-page="farm"],
       [data-page="forecasts"],
       [data-page="planting"],
-      [data-page="journal"]
+      [data-page="journal"],
+      [data-page="learn"]
     )
     .mf-brand
     .mf-logo-compact {
@@ -536,7 +578,8 @@ body:is(
       [data-page="farm"],
       [data-page="forecasts"],
       [data-page="planting"],
-      [data-page="journal"]
+      [data-page="journal"],
+      [data-page="learn"]
     )
     .mf-brand
     .mf-logo-expanded {

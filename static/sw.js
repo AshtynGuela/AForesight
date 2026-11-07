@@ -1,5 +1,8 @@
-const CACHE = "agriforesight-shell-v50-crop-plans";
+const CACHE = "agriforesight-shell-v52-methods-layout";
 const FILES = [
+  "/static/methods-assets/rice-field.png",
+  "/static/methods-assets/references.svg",
+  "/static/planning-assets/tea-harvest.jpg",
   "/static/planning-assets/top.svg",
   "/static/planning-assets/middle.svg",
   "/static/planning-assets/pair.svg",
