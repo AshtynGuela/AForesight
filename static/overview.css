@@ -26,9 +26,57 @@ body[data-page="overview"] .context-toolbar,body[data-page="overview"] #period-p
 body[data-page="overview"].ov-dates-open #period-panel{display:block;background:#e3e4d6;margin:0 0 20px}
 #overview{font-family:'JetBrains Mono',Consolas,monospace;color:#262626;font-size:calc(14px * var(--overview-text-scale,1));position:relative}
 #overview button{font-family:inherit}#overview .ov-top{display:flex;align-items:center;gap:18px;margin:0 140px 14px 0;flex-wrap:wrap}
-#overview .ov-title{display:flex;align-items:center;gap:12px;border:1px solid #40404080;background:#333c2099;backdrop-filter:blur(12px);border-radius:20px;padding:8px 12px;color:white;min-width:0}
-#overview .ov-title h2{font-size:1.7em;margin:0;overflow-wrap:anywhere}#overview .ov-title small{font-size:.75em;max-width:95px;line-height:1.5}
-#overview .ov-edit{background:#333333;border-radius:24px;color:#fff;box-shadow:inset 1px 1px white,2px 3px 5px #0003;white-space:nowrap}
+#overview .ov-title{
+    display:flex;
+    align-items:center;
+    gap:16px;
+    min-height:56px;
+    min-width:0;
+    padding:8px 16px 8px 8px;
+    border:1px solid #d5c74580;
+    border-radius:23px;
+    background:linear-gradient(105deg,#b6a522e6,#5a5c29ed);
+    backdrop-filter:blur(12px);
+    color:#fff;
+    box-shadow:inset 0 1px 1px #ffffff30,0 2px 5px #0002;
+}
+#overview .ov-title h2{
+    margin:0;
+    font-size:2.15em;
+    font-weight:400;
+    line-height:1.2;
+    overflow-wrap:anywhere;
+}
+#overview .ov-title small{
+    display:flex;
+    flex-direction:column;
+    flex-shrink:0;
+    font-size:.85em;
+    line-height:1.35;
+    white-space:nowrap;
+}
+#overview .ov-edit{
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    gap:9px;
+    min-height:50px;
+    padding:6px 13px;
+    border:1px solid #e3e4d6;
+    border-radius:24px;
+    background:#333333;
+    color:#fff;
+    font-size:1.3em;
+    font-weight:700;
+    white-space:nowrap;
+    box-shadow:inset 0 1px 1px #fff6,0 3px 5px #0003;
+}
+#overview .ov-edit img{
+    width:32px;
+    height:32px;
+    object-fit:contain;
+    filter:brightness(0) invert(.75);
+}
 #overview .ov-zoom{display:flex;gap:5px;position:absolute;right:0;top:8px}#overview .ov-zoom button{background:#f4f4f4;border-radius:50%;padding:5px;width:38px;height:38px;min-height:38px;display:grid;place-items:center}
 #overview .ov-stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr)) minmax(180px,1.25fr);gap:16px;margin:0 0 20px}
 #overview .ov-stats article{position:relative;background:#e3e4d6;border:0;border-radius:16px;padding:14px 12px 14px 66px;display:block;min-width:0;box-shadow:inset .5px .5px 1px white,2px 3px 5px #0002}

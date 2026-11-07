@@ -8,7 +8,15 @@ const oldOverview=el('details',undefined,'ov-details');oldOverview.append(el('su
 while(overview.firstChild)oldOverview.append(overview.firstChild);
 overview.append(oldOverview);
 const top=el('div',undefined,'ov-top');const title=el('div',undefined,'ov-title');title.append($('#farm-title'));const coords=el('small');coords.id='ov-coordinates';title.append(coords);top.append(title);
-const edit=el('button','Edit farm','ov-edit');edit.onclick=()=>tab('farm');top.append(edit);
+const edit=el('button',undefined,'ov-edit');
+edit.type='button';
+edit.append(ovImage('imgEdit.svg'),el('span','Edit Farm'));
+edit.onclick=()=>tab('farm');
+top.append(edit);
+function coordinateLabel(value,positive,negative){
+    const minutes=Math.round(Math.abs(Number(value))*60);
+    return Math.floor(minutes/60)+'\u00b0'+String(minutes%60).padStart(2,'0')+'\u2032'+(Number(value)<0?negative:positive);
+}
 const periodButton=el('button','Choose past dates','secondary');periodButton.onclick=()=>{$('#period-panel').open=true;$('#period-panel').scrollIntoView({behavior:'smooth'});};top.append(periodButton);
 const stats=oldOverview.querySelector('.stats');stats.classList.add('ov-stats');
 ['imgDroplet.svg','imgGroup5.svg','imgGroup4.svg'].forEach((name,i)=>stats.children[i].prepend(ovImage(name)));
@@ -57,7 +65,7 @@ function renderWeatherChart(selector,days,field){
   host.append(svg);
   const readings=el('details',undefined,'ov-readings');readings.append(el('summary','Read the values'),makeTable(['Date / period',rain?'Rain (mm/day)':'Daily average (°C)','Days recorded'],bins.map(b=>[b.from===b.to?b.from:b.from+' to '+b.to,b.value===null?'No reading':num(b.value),b.n])));host.append(readings);
 }
-function renderOverviewDesign(){if(!state)return;const farm=state.farm;$('#farm-title').textContent=farm.name;coords.textContent=Number(farm.latitude).toFixed(4)+' N  '+Number(farm.longitude).toFixed(4)+' E';placeValue.textContent=farm.municipality;current.replaceChildren(el('small','Currently growing'),el('strong',farm.crop));current.title='Edit your current crop';current.onclick=()=>tab('farm');current.setAttribute('aria-label','Current crop: '+farm.crop+'. Edit crop');
+function renderOverviewDesign(){if(!state)return;const farm=state.farm;$('#farm-title').textContent=farm.name;coords.replaceChildren(el('span',coordinateLabel(farm.latitude,'N','S')),el('span',coordinateLabel(farm.longitude,'E','W')));placeValue.textContent=farm.municipality;current.replaceChildren(el('small','Currently growing'),el('strong',farm.crop));current.title='Edit your current crop';current.onclick=()=>tab('farm');current.setAttribute('aria-label','Current crop: '+farm.crop+'. Edit crop');
 const days=[...visibleHistory()].sort((a,b)=>a.date.localeCompare(b.date));const rain=days.filter(d=>Number.isFinite(d.rain)&&d.rain>=0);const temp=days.filter(d=>Number.isFinite(d.temp));$('#rain-label').textContent='Average daily rainfall';$('#rain-stat').textContent=rain.length?num(rain.reduce((s,d)=>s+d.rain,0)/rain.length)+' mm/day':'â€”';$('#rain-caption').textContent='Daily average across '+rain.length+' recorded days';stats.children[0].title=$('#rain-caption').textContent;$('#temp-label').textContent='Past temperature';$('#temp-stat').textContent=temp.length?num(temp.reduce((s,d)=>s+d.temp,0)/temp.length)+' °C':'â€”';$('#temp-caption').textContent='Average over '+temp.length+' recorded days';stats.children[1].title=$('#temp-caption').textContent;
 const label=days.length?days[0].date+' to '+days.at(-1).date:'No saved readings for these dates';overview.querySelectorAll('.ov-chart-source').forEach(n=>n.textContent=label);
 renderWeatherChart('#ov-rain',days,'rain');renderWeatherChart('#ov-temp',days,'temp');
