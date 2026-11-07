@@ -727,7 +727,9 @@
       : null;
     showConditions(saved, "Checking the weather services…");
     try {
-      const result = await api("/api/conditions", {});
+      const result = await farmConditions.load({ ...state.farm }, () =>
+        api("/api/conditions", {}),
+      );
       if (point !== state.farm.latitude + ":" + state.farm.longitude) return;
       state.current_conditions = result.conditions;
       conditionsWarning = result.warning || "";
@@ -927,6 +929,7 @@
     ) {
       if (
         !matches ||
+        !Number.isFinite(conditions.soil_moisture) ||
         Date.now() - Date.parse(conditions.retrieved_at) > 1800000
       )
         loadConditions();

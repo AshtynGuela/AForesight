@@ -1,5 +1,6 @@
-const CACHE = "agriforesight-shell-v37-map-toolbar-conditions";
+const CACHE = "agriforesight-shell-v38-open-meteo-browser";
 const FILES = [
+  "/static/conditions.js",
   "/static/myfarm-assets/farm-mark.png",
   "/static/vendor/leaflet/images/layers.png",
   "/static/vendor/leaflet/images/layers-2x.png",

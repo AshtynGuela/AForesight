@@ -558,6 +558,14 @@ function renderHistory() {
 $("#history-variable").onchange = renderHistory;
 async function refresh() {
   state = await api("/api/state");
+  const preferredConditions = farmConditions.preferCached(
+    state.farm,
+    state.current_conditions,
+  );
+  if (preferredConditions !== state.current_conditions) {
+    state.current_conditions = preferredConditions;
+    state.current_conditions_status = null;
+  }
   try {
     save(CACHE, state);
   } catch {

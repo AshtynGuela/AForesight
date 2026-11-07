@@ -118,6 +118,8 @@ The My Farm sensor log shows weather-model estimates, separate from actual soil 
 
 Map controls, location previews, help and the map message share a toolbar so they do not cover one another. Open More Details to hide the map while editing; the help button stays available.
 
+If the server falls back to MET Norway or cannot supply soil moisture, the browser also tries Open-Meteo's public API directly. This needs no key and sends the saved coordinates to Open-Meteo. Successful estimates cache on that device for 30 minutes and stay visible after refreshing the farm. They are separate from database soil samples and are not uploaded as verified sensor records. `static/conditions.js` handles this request and validates timestamps, units and values. Run `node --test tests/test_conditions_client.cjs` to check this path.
+
 More Details contains compact crop and soil-sample fields. Use Input for typed coordinates or GPS. Location previews stay on the map and are saved separately from other unfinished form edits.
 
 The location tile checks [KartaView](https://kartaview.org/doc/photos) for a public street photo within 500 m of the saved point. Tap a photo to enlarge it without leaving the app. The distance and capture date help distinguish a nearby road from your actual field. Where coverage is missing or the service fails, the tile opens the farm map. Photos need internet access; metadata caches for a day (six hours for no coverage, five minutes for outages). Images are credited to KartaView contributors under [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/). This works on Render without extra keys or paid services.
