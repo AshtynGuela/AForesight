@@ -77,3 +77,82 @@ class ConditionsTests(unittest.TestCase):
         self.assertIsNone(data["humidity"])
         self.assertTrue(data["valid_at"].endswith("+08:00"))
         self.assertEqual(data["soil_depth_cm"], [0, 1])
+
+    def test_free_backup_has_real_air_values_and_no_invented_soil_moisture(self):
+        response = Mock()
+        response.headers = {}
+        stamp = datetime.now(timezone.utc).replace(minute=0, second=0, microsecond=0)
+        response.json.return_value = {
+            "properties": {
+                "timeseries": [
+                    {
+                        "time": stamp.isoformat(),
+                        "data": {
+                            "instant": {
+                                "details": {
+                                    "air_temperature": 27.5,
+                                    "relative_humidity": 82,
+                                }
+                            }
+                        },
+                    },
+                    {
+                        "time": (stamp + timedelta(days=1)).isoformat(),
+                        "data": {
+                            "instant": {
+                                "details": {
+                                    "air_temperature": 50,
+                                    "relative_humidity": 10,
+                                }
+                            }
+                        },
+                    },
+                ]
+            }
+        }
+        with patch(
+            "forecast.requests.get", side_effect=[requests.Timeout(), response]
+        ) as fetch:
+            data = fetch_conditions(13.139123, 123.743812)
+        self.assertEqual(data["temperature"], 27.5)
+        self.assertEqual(data["humidity"], 82)
+        self.assertIsNone(data["soil_moisture"])
+        self.assertIn("MET Norway", data["source"])
+        self.assertGreaterEqual(
+            (
+                datetime.fromisoformat(data["cache_until"])
+                - datetime.fromisoformat(data["retrieved_at"])
+            ).total_seconds(),
+            10800,
+        )
+        self.assertEqual(
+            fetch.call_args.kwargs["params"], {"lat": 13.1391, "lon": 123.7438}
+        )
+
+    def test_provider_failure_survives_state_refresh_and_briefly_backs_off(self):
+        with patch("app.fetch_conditions", side_effect=requests.Timeout) as fetch:
+            first = self.client.post("/api/conditions", json={})
+            second = self.client.post("/api/conditions", json={})
+        self.assertEqual(first.status_code, 502)
+        self.assertEqual(second.json, first.json)
+        self.assertEqual(fetch.call_count, 1)
+        status = self.client.get("/api/state").json["current_conditions_status"]
+        self.assertEqual(status["message"], first.json["error"])
+        self.assertEqual(status["code"], "conditions_timeout")
+
+    def test_backup_cache_does_not_poll_before_its_allowed_refresh(self):
+        payload = self.payload()
+        payload["source"] = "MET Norway (CC BY 4.0)"
+        payload["retrieved_at"] = (
+            datetime.now(timezone.utc) - timedelta(hours=1)
+        ).isoformat()
+        payload["cache_until"] = (
+            datetime.now(timezone.utc) + timedelta(hours=2)
+        ).isoformat()
+        key = f"conditions:v1:{DEFAULT_FARM['latitude']}:{DEFAULT_FARM['longitude']}"
+        with closing(sqlite3.connect(self.path)) as conn, conn:
+            conn.execute("INSERT INTO state VALUES (?,?)", (key, json.dumps(payload)))
+        with patch("app.fetch_conditions") as fetch:
+            response = self.client.post("/api/conditions", json={})
+        self.assertTrue(response.json["cached"])
+        fetch.assert_not_called()

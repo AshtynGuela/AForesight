@@ -2,6 +2,12 @@
 
 A single-farm prototype for checking weather, comparing crops and keeping field notes. The chat assistant can explain saved data and help edit farm details.
 
+**Live demo:** https://aforesight.onrender.com/ — Open **Ask for help** to use the hosted chatbot. It needs internet access and a working provider on the server. If Render is waking up, allow about a minute for the first load.
+
+## Submission package
+
+The source ZIP includes the app, images, Philippine boundary data, sourced weather samples and setup instructions. It excludes Python environments, Git history, caches, private databases and API keys. Install dependencies using the steps below for a local run. Set your own provider variables to enable AI locally; the included code alone does not run an offline language model. The hosted demo uses its own server-side configuration and may run an earlier version until redeployed.
+
 ## Run locally
 
 Use Python 3.12. Open PowerShell in the folder containing `app.py` and `render.yaml`.
@@ -108,7 +114,9 @@ My Farm uses locally bundled Leaflet 1.9.4 with Esri satellite imagery and an Op
 
 The My Farm Saved Weather card shows the selected historical rainfall and temperature, with source and dates. At the Legazpi example coordinates (13.1391, 123.7438), **Load sourced Legazpi weather** loads the bundled NASA POWER snapshot and selects its latest available month. Other farm coordinates need a weather download for that point. Weather downloads provide no measured soil chemistry or farm area.
 
-The My Farm sensor log can show Open-Meteo model estimates for current air temperature, relative humidity and surface soil moisture (0–1 cm). Soil moisture is displayed as volume percent, converted from m³/m³. Estimates carry the provider time, cache for 30 minutes and retain the original timestamp if an update fails. Open More Details to hide the map while editing.
+The My Farm sensor log shows weather-model estimates, separate from actual soil samples. Open-Meteo supplies air temperature, humidity and surface soil moisture (0–1 cm, displayed as volume percent). If it fails, [MET Norway](https://api.met.no/doc/License) provides backup air estimates under CC BY 4.0; it supplies no soil moisture. The source and time stay visible. Open-Meteo caches for 30 minutes; MET Norway caches for at least three hours and until its expiry header. If both services fail, saved estimates keep their original time, the error remains visible, and repeated updates wait a minute. Render needs no new API keys. Its logs distinguish timeouts, connection problems and provider HTTP errors.
+
+Map controls, location previews, help and the map message share a toolbar so they do not cover one another. Open More Details to hide the map while editing; the help button stays available.
 
 More Details contains compact crop and soil-sample fields. Use Input for typed coordinates or GPS. Location previews stay on the map and are saved separately from other unfinished form edits.
 

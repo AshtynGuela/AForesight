@@ -1,4 +1,4 @@
-const CACHE = "agriforesight-shell-v36-code-cleanup";
+const CACHE = "agriforesight-shell-v37-map-toolbar-conditions";
 const FILES = [
   "/static/myfarm-assets/farm-mark.png",
   "/static/vendor/leaflet/images/layers.png",

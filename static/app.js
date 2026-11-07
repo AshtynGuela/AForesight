@@ -40,6 +40,25 @@ function notice(text, error = false) {
   $("#notice").textContent = text;
   $("#notice").classList.toggle("error", error);
 }
+function syncAssistantLauncher() {
+  const farmPage = $("#farm");
+  const mapArea = farmPage.querySelector(".mf-map-area");
+  const mapBounds = mapArea?.getBoundingClientRect();
+  const mapVisible =
+    mapBounds &&
+    mapBounds.height > 0 &&
+    mapBounds.top < innerHeight &&
+    mapBounds.bottom > 0;
+  const dock =
+    document.body.dataset.page === "farm" &&
+    !farmPage.classList.contains("mf-details-open") &&
+    mapVisible
+      ? $("#mf-map-actions")
+      : null;
+  const launcher = $("#chat-toggle");
+  const target = dock || document.body;
+  if (launcher.parentElement !== target) target.append(launcher);
+}
 function tab(id) {
   document.body.dataset.page = id;
   document.querySelectorAll(".page").forEach((p) => (p.hidden = p.id !== id));
@@ -48,6 +67,7 @@ function tab(id) {
     b.setAttribute("aria-current", b.dataset.tab === id ? "page" : "false");
   });
   notice("");
+  syncAssistantLauncher();
   window.scrollTo({ top: 0, behavior: "instant" });
   requestAnimationFrame(renderActivePage);
 }
@@ -86,8 +106,14 @@ async function api(path, data) {
   } catch {
     throw new Error("The server returned an unreadable response.");
   }
-  if (!r.ok)
-    throw new Error(result.error || "The request could not be completed.");
+  if (!r.ok) {
+    const error = new Error(
+      result.error || "The request could not be completed.",
+    );
+    error.status = r.status;
+    error.code = result.code;
+    throw error;
+  }
   return result;
 }
 function connected(yes) {

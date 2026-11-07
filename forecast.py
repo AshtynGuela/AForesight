@@ -1,7 +1,9 @@
 """Optional weather enrichment, kept separate from measured soil and history."""
 
 import math
+import logging
 from datetime import datetime, timezone, date, timedelta
+from email.utils import parsedate_to_datetime
 import requests
 
 
@@ -192,7 +194,7 @@ def fetch_month_outlook(latitude, longitude):
     }
 
 
-def fetch_conditions(latitude, longitude):
+def _fetch_open_meteo_conditions(latitude, longitude):
     """Nearby model estimates; these are separate from user-entered soil tests."""
     response = requests.get(
         "https://api.open-meteo.com/v1/forecast",
@@ -203,7 +205,7 @@ def fetch_conditions(latitude, longitude):
             "current": "temperature_2m,relative_humidity_2m,soil_moisture_0_to_1cm",
             "temperature_unit": "celsius",
         },
-        timeout=(8, 25),
+        timeout=(5, 12),
     )
     response.raise_for_status()
     payload = response.json()
@@ -235,3 +237,79 @@ def fetch_conditions(latitude, longitude):
         "soil_depth_cm": [0, 1],
         "soil_moisture_unit": "m³/m³",
     }
+
+
+def _fetch_met_norway_conditions(latitude, longitude):
+    """Free backup for air estimates only; MET does not supply soil moisture."""
+    response = requests.get(
+        "https://api.met.no/weatherapi/locationforecast/2.0/compact",
+        params={"lat": round(latitude, 4), "lon": round(longitude, 4)},
+        headers={
+            "User-Agent": "AgriForesightPrototype/1.0 https://github.com/AshtynGuela/AForesight"
+        },
+        timeout=(5, 12),
+    )
+    response.raise_for_status()
+    now = datetime.now(timezone.utc)
+    payload = response.json()
+    properties = payload.get("properties") if isinstance(payload, dict) else None
+    rows = properties.get("timeseries") if isinstance(properties, dict) else None
+    if not isinstance(rows, list):
+        raise ValueError("The backup service returned an unreadable weather reply.")
+    candidates = []
+    for row in rows:
+        if not isinstance(row, dict) or not isinstance(row.get("time"), str):
+            continue
+        try:
+            stamp = datetime.fromisoformat(row["time"].replace("Z", "+00:00"))
+            age = (now - stamp).total_seconds()
+            details = row["data"]["instant"]["details"]
+        except (ValueError, TypeError, KeyError):
+            continue
+        if not isinstance(details, dict):
+            continue
+        if 0 <= age <= 21600:
+            candidates.append((stamp, details))
+    if not candidates:
+        raise ValueError("The backup service returned no recent estimates.")
+    stamp, details = max(candidates, key=lambda item: item[0])
+    temperature = details.get("air_temperature")
+    humidity = details.get("relative_humidity")
+    if not finite(temperature, -60, 65) or not finite(humidity, 0, 100):
+        raise ValueError("The backup service returned no usable air estimates.")
+    # Global MET forecasts must be cached for at least three hours, and until Expires.
+    expires = now + timedelta(hours=3)
+    try:
+        expires = max(expires, parsedate_to_datetime(response.headers["Expires"]))
+    except (KeyError, TypeError, ValueError):
+        pass
+    return {
+        "temperature": temperature,
+        "humidity": humidity,
+        "soil_moisture": None,
+        "latitude": latitude,
+        "longitude": longitude,
+        "source": "MET Norway (CC BY 4.0)",
+        "kind": "model_estimate",
+        "source_url": "https://api.met.no/doc/License",
+        "valid_at": stamp.isoformat(),
+        "retrieved_at": now.isoformat(),
+        "cache_until": expires.isoformat(),
+        "soil_depth_cm": None,
+        "note": "Using backup air estimates. Soil moisture is not supplied by this source.",
+    }
+
+
+def fetch_conditions(latitude, longitude):
+    """Try the main provider, then an independent source without inventing soil data."""
+    try:
+        return _fetch_open_meteo_conditions(latitude, longitude)
+    except (requests.RequestException, ValueError, KeyError, TypeError) as error:
+        response = getattr(error, "response", None)
+        status = response.status_code if response is not None else None
+        logging.getLogger(__name__).warning(
+            "Open-Meteo estimates unavailable: type=%s status=%s; trying MET Norway",
+            type(error).__name__,
+            status,
+        )
+    return _fetch_met_norway_conditions(latitude, longitude)

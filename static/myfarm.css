@@ -501,11 +501,14 @@ body[data-page="farm"] #offline:not([hidden]) {
 #farm .mf-map-area {
   position: sticky;
   top: 0;
-  height: 100vh;
-  min-height: 650px;
+  height: calc(100dvh - var(--mf-top-space, 0px));
+  min-height: 500px;
   background: #69775b;
   isolation: isolate;
   min-width: 0;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  gap: 12px;
 }
 #mf-live-map {
   position: absolute;
@@ -514,10 +517,9 @@ body[data-page="farm"] #offline:not([hidden]) {
   background: #69775b;
 }
 #farm .mf-map-top {
-  position: absolute;
-  top: 30px;
-  left: 20px;
-  right: 20px;
+  position: relative;
+  grid-row: 1;
+  padding: 18px 18px 0;
   z-index: 1;
   display: flex;
   justify-content: space-between;
@@ -536,10 +538,13 @@ body[data-page="farm"] #offline:not([hidden]) {
   box-shadow: 1px 2px 4px #0003;
 }
 #farm .mf-status-card {
-  position: absolute;
-  top: 26%;
-  right: 26px;
-  width: min(288px, calc(100% - 48px));
+  position: relative;
+  grid-row: 2;
+  justify-self: end;
+  align-self: start;
+  margin-right: 18px;
+  width: min(288px, calc(100% - 90px));
+  min-height: 0;
   border-radius: 30px;
   background: linear-gradient(
     180deg,
@@ -604,9 +609,7 @@ body[data-page="farm"] #offline:not([hidden]) {
   margin-top: 0;
 }
 #farm .mf-map-pick {
-  position: absolute;
-  bottom: 60px;
-  left: 20px;
+  position: static;
   background: #f4f4f4;
   color: #333;
   border-radius: 24px;
@@ -615,10 +618,7 @@ body[data-page="farm"] #offline:not([hidden]) {
   box-shadow: 1px 2px 4px #0003;
 }
 #farm .mf-map-hint {
-  position: absolute;
-  left: 20px;
-  right: 65px;
-  bottom: 16px;
+  position: static;
   z-index: 1;
   background: #f4f4f4e6;
   border-radius: 12px;
@@ -637,6 +637,33 @@ body[data-page="farm"] #offline:not([hidden]) {
 #farm .leaflet-control-zoom {
   border: 0;
   box-shadow: none;
+}
+#farm .leaflet-top.leaflet-left {
+  top: 84px;
+  left: 8px;
+}
+#farm .mf-map-footer {
+  grid-row: 3;
+  z-index: 2;
+  min-width: 0;
+  padding: 0 18px 30px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+#farm .mf-map-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+#farm .mf-map-actions .assistant-launcher {
+  position: static;
+  margin-left: auto;
+  max-width: 100%;
+  min-height: 44px;
+  padding: 10px 14px;
+  font-size: 13px;
 }
 #farm .leaflet-control-attribution {
   font-size: 9px;
@@ -664,10 +691,6 @@ body[data-page="farm"] #offline:not([hidden]) {
   #farm .mf-locate-actions {
     flex-wrap: wrap;
   }
-  #farm .mf-status-card {
-    top: 20%;
-    right: 14px;
-  }
   body[data-page="farm"] .layout {
     grid-template-columns: 88px minmax(0, 1fr);
   }
@@ -686,9 +709,6 @@ body[data-page="farm"] #offline:not([hidden]) {
   }
   #farm .mf-readings {
     grid-template-columns: 1.6fr 1fr;
-  }
-  #farm .mf-status-card {
-    top: 100px;
   }
   body[data-page="farm"] aside {
     height: 100vh;
@@ -765,14 +785,9 @@ body[data-page="farm"] #offline:not([hidden]) {
   #farm .mf-farm-grid select {
     font-size: 17px;
   }
-  #farm .mf-map-top {
-    top: 16px;
-    left: 12px;
-    right: 12px;
-  }
   #farm .mf-status-card {
     width: 240px;
-    right: 12px;
+    max-width: calc(100% - 90px);
   }
   #farm .mf-more .form-grid {
     grid-template-columns: 1fr;
@@ -844,7 +859,7 @@ body[data-page="farm"] #offline:not([hidden]) {
 
 #farm .mf-status-card {
   pointer-events: auto;
-  max-height: calc(74% - 100px);
+  max-height: 100%;
   overflow-y: auto;
 }
 
@@ -895,10 +910,7 @@ body[data-page="farm"] #offline:not([hidden]) {
   padding: 0;
 }
 #farm .mf-point-confirm {
-  position: absolute;
-  bottom: 112px;
-  left: 20px;
-  right: 20px;
+  position: static;
   z-index: 2;
   background: #e3e4d6f5;
   padding: 16px 18px;
@@ -933,10 +945,5 @@ body[data-page="farm"] #offline:not([hidden]) {
 @media (max-width: 550px) {
   #farm .mf-detail-grid {
     grid-template-columns: 1fr;
-  }
-  #farm .mf-point-confirm {
-    left: 12px;
-    right: 12px;
-    bottom: 120px;
   }
 }

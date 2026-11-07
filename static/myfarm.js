@@ -416,7 +416,12 @@
   const pointActions = el("div", undefined, "mf-point-actions");
   pointActions.append(savePointButton, cancelPointButton);
   pointConfirmation.append(pointMessage, pointActions);
-  mapArea.append(mapHost, mapTop, statusCard, pick, pointConfirmation, mapHint);
+  const mapFooter = el("div", undefined, "mf-map-footer");
+  const mapActions = el("div", undefined, "mf-map-actions");
+  mapActions.id = "mf-map-actions";
+  mapActions.append(pick);
+  mapFooter.append(pointConfirmation, mapActions, mapHint);
+  mapArea.append(mapHost, mapTop, statusCard, mapFooter);
   page.append(mapArea);
   const logo = el("div", undefined, "mf-brand");
   const compactLogo = image("farm-mark.png", "AgriForesight");
@@ -445,7 +450,9 @@
     currentPointKey,
     selecting = false;
   let conditionsPointKey,
-    conditionsLoading = false;
+    conditionsLoading = false,
+    conditionsLastAttempt = 0,
+    conditionsWarning = "";
   let pendingPoint = null,
     selectionVersion = 0,
     savingPoint = false;
@@ -685,8 +692,18 @@
     }
     if (!conditions) {
       conditionTime.textContent = warning || "No estimates loaded yet.";
+      conditionNote.textContent =
+        "These are weather-model estimates, not readings from a sensor on your farm.";
+      conditionSource.hidden = true;
       return;
     }
+    conditionSource.hidden = false;
+    conditionSource.textContent = conditions.source || "Open-Meteo";
+    conditionSource.href =
+      conditions.source_url || "https://open-meteo.com/en/docs";
+    conditionNote.textContent =
+      conditions.note ||
+      "Soil moisture is the modeled water volume in the top 0–1 cm of soil.";
     const stamp = new Date(conditions.valid_at);
     const age = Date.now() - stamp.getTime();
     const time = Number.isFinite(stamp.getTime())
@@ -701,20 +718,41 @@
   async function loadConditions() {
     if (conditionsLoading || !state) return;
     conditionsLoading = true;
+    conditionsLastAttempt = Date.now();
     conditionUpdate.disabled = true;
+    conditionUpdate.textContent = "Loading estimates…";
     const point = state.farm.latitude + ":" + state.farm.longitude;
+    const saved = samePoint(state.current_conditions, state.farm)
+      ? state.current_conditions
+      : null;
+    showConditions(saved, "Checking the weather services…");
     try {
       const result = await api("/api/conditions", {});
       if (point !== state.farm.latitude + ":" + state.farm.longitude) return;
       state.current_conditions = result.conditions;
-      save(CACHE, state);
-      showConditions(result.conditions, result.warning || "");
+      conditionsWarning = result.warning || "";
+      state.current_conditions_status = conditionsWarning
+        ? { message: conditionsWarning }
+        : null;
+      showConditions(result.conditions, conditionsWarning);
+      try {
+        save(CACHE, state);
+      } catch {
+        /* The loaded estimates remain visible if browser storage is full. */
+      }
     } catch (error) {
-      if (point === state.farm.latitude + ":" + state.farm.longitude)
-        showConditions(state.current_conditions, error.message);
+      if (point === state.farm.latitude + ":" + state.farm.longitude) {
+        conditionsWarning =
+          error.status === 404
+            ? "This server needs the latest app update before it can load estimates. Redeploy the latest code on Render."
+            : error.message;
+        state.current_conditions_status = { message: conditionsWarning };
+        showConditions(saved, conditionsWarning);
+      }
     } finally {
       conditionsLoading = false;
       conditionUpdate.disabled = false;
+      conditionUpdate.textContent = "Update estimates";
       if (
         document.body.dataset.page === "farm" &&
         point !== state.farm.latitude + ":" + state.farm.longitude
@@ -724,12 +762,33 @@
   }
   more.addEventListener("toggle", () => {
     page.classList.toggle("mf-details-open", more.open);
+    syncAssistantLauncher();
     if (!more.open)
       requestAnimationFrame(() => {
         ensureMap();
         map?.invalidateSize();
       });
   });
+
+  // Reserve the visible banner/notice space above the map, including on Render.
+  let mapViewportFrame;
+  function fitMapViewport() {
+    cancelAnimationFrame(mapViewportFrame);
+    mapViewportFrame = requestAnimationFrame(() => {
+      if (document.body.dataset.page !== "farm" || more.open) return;
+      syncAssistantLauncher();
+      const top =
+        window.innerWidth > 950
+          ? Math.max(0, mapArea.getBoundingClientRect().top)
+          : 0;
+      mapArea.style.setProperty("--mf-top-space", top + "px");
+    });
+  }
+  const bannerObserver = new ResizeObserver(fitMapViewport);
+  for (const node of [$("#demo-banner"), $("#notice")])
+    if (node) bannerObserver.observe(node);
+  window.addEventListener("resize", fitMapViewport);
+  window.addEventListener("scroll", fitMapViewport, { passive: true });
 
   function ensureMap() {
     if (map || more.open || document.body.dataset.page !== "farm" || !state)
@@ -767,10 +826,10 @@
     satellite.addTo(map);
     L.control
       .layers({ Satellite: satellite, "Street map": street }, null, {
-        position: "bottomleft",
+        position: "topleft",
       })
       .addTo(map);
-    L.control.zoom({ position: "bottomright" }).addTo(map);
+    L.control.zoom({ position: "topleft" }).addTo(map);
     for (const layer of [satellite, street]) {
       layer.on(
         "tileerror",
@@ -801,6 +860,8 @@
   }
   function renderMyFarm() {
     if (!state) return;
+    syncAssistantLauncher();
+    fitMapViewport();
     const farm = state.farm;
     savedName.textContent = farm.name;
     if (!pendingPoint) savedPlace.textContent = farm.municipality;
@@ -836,6 +897,11 @@
       ? "Changes waiting to be saved"
       : "Saved farm details";
     const pointKey = farm.latitude + ":" + farm.longitude;
+    if (conditionsPointKey !== pointKey) {
+      conditionsPointKey = pointKey;
+      conditionsLastAttempt = 0;
+      conditionsWarning = "";
+    }
     if (photoPointKey !== pointKey) {
       // Clear the old place immediately, including while another page is open.
       photoRequest++;
@@ -848,12 +914,17 @@
       conditions &&
       conditions.latitude === farm.latitude &&
       conditions.longitude === farm.longitude;
-    showConditions(matches ? conditions : null);
+    showConditions(
+      matches ? conditions : null,
+      conditionsLoading
+        ? "Checking the weather services…"
+        : state.current_conditions_status?.message || conditionsWarning,
+    );
     if (
       document.body.dataset.page === "farm" &&
-      conditionsPointKey !== pointKey
+      !conditionsLoading &&
+      Date.now() - conditionsLastAttempt > 60000
     ) {
-      conditionsPointKey = pointKey;
       if (
         !matches ||
         Date.now() - Date.parse(conditions.retrieved_at) > 1800000

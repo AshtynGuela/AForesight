@@ -448,6 +448,9 @@ def create_app(database=None):
             current_conditions=get(
                 f"conditions:v1:{farm['latitude']}:{farm['longitude']}"
             ),
+            current_conditions_status=get(
+                f"conditions-status:v1:{farm['latitude']}:{farm['longitude']}"
+            ),
             data_labels={
                 "history": history_label(climate),
                 "forecast": "Weather forecast" if forecast else "No forecast loaded",
@@ -546,22 +549,64 @@ def create_app(database=None):
         farm = get("farm", DEFAULT_FARM)
         lookup(farm["latitude"], farm["longitude"])
         key = f"conditions:v1:{farm['latitude']}:{farm['longitude']}"
+        status_key = f"conditions-status:v1:{farm['latitude']}:{farm['longitude']}"
         saved = get(key)
-        if saved and is_recent(saved.get("retrieved_at"), 1800):
+        protected = saved and age_seconds(saved.get("cache_until"))
+        if saved and (
+            is_recent(saved.get("retrieved_at"), 1800)
+            or (protected is not None and protected < 0)
+        ):
             return jsonify(conditions=saved, cached=True)
+        failure = get(status_key)
+        if failure and is_recent(failure.get("checked_at"), 60):
+            if saved:
+                return jsonify(
+                    conditions=saved, cached=True, warning=failure["message"]
+                )
+            return jsonify(error=failure["message"], code=failure["code"]), 502
         try:
             conditions = fetch_conditions(farm["latitude"], farm["longitude"])
-        except (requests.RequestException, ValueError, KeyError, TypeError):
+        except (requests.RequestException, ValueError, KeyError, TypeError) as error:
+            response = getattr(error, "response", None)
+            status = response.status_code if response is not None else None
+            app.logger.warning(
+                "Current estimates failed: type=%s upstream_status=%s",
+                type(error).__name__,
+                status,
+            )
+            reason = "Weather estimates could not be loaded from either service. Try again in a minute."
+            code = "conditions_unavailable"
+            if isinstance(error, requests.Timeout):
+                reason = (
+                    "Weather services took too long to reply. Try again in a minute."
+                )
+                code = "conditions_timeout"
+            elif status == 429:
+                reason = "Weather services are busy. Try again in a minute."
+                code = "conditions_busy"
+            elif isinstance(error, requests.ConnectionError):
+                reason = "This server could not reach the weather services. Try again in a minute."
+                code = "conditions_connection"
+            warning = reason + (
+                " Saved estimates keep their original time." if saved else ""
+            )
+            put(
+                status_key,
+                {
+                    "message": warning,
+                    "code": code,
+                    "checked_at": datetime.now(timezone.utc).isoformat(),
+                },
+            )
             if saved:
                 return jsonify(
                     conditions=saved,
                     cached=True,
-                    warning="Update failed. Showing the saved estimates with their original time.",
+                    warning=warning,
                 )
-            return jsonify(
-                error="Current estimates could not be loaded. Try again shortly."
-            ), 502
+            return jsonify(error=reason, code=code), 502
         put(key, conditions)
+        put(status_key, None)
         return jsonify(conditions=conditions, cached=False)
 
     @app.post("/api/profile")

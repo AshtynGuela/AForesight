@@ -187,6 +187,15 @@ document
   .forEach((b) => (b.onclick = () => sendChat(b.dataset.chat)));
 
 function setAssistantOpen(open) {
+  if (open && document.fullscreenElement?.classList.contains("mf-map-area")) {
+    document
+      .exitFullscreen()
+      .then(() => setAssistantOpen(true))
+      .catch(() => {
+        notice("Close the full-screen map to open the assistant.", true);
+      });
+    return;
+  }
   $("#assistant").hidden = !open;
   $("#chat-toggle").setAttribute("aria-expanded", String(open));
   if (open) {
