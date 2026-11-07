@@ -1,4 +1,5 @@
 """Small, bounded assistant: understand a request, then let Flask do the work."""
+
 from contextvars import ContextVar
 import json
 import os
@@ -7,31 +8,79 @@ import logging
 import time
 import requests
 
-INTENTS = ("weather", "crops", "farm", "crop", "stage", "note", "help", "chat", "drainage", "cancel", "confirm", "profile", "navigate")
-SCHEMA = {"type":"object", "properties":{"intent":{"type":"string","enum":list(INTENTS)}, "value":{"type":"string"}}, "required":["intent","value"], "additionalProperties":False}
-
-
-PROVIDERS = {
-    'openrouter': ('OpenRouter', 'OPENROUTER_API_KEY', 'nvidia/nemotron-3.5-super-vl:free', 'https://openrouter.ai/api/v1/chat/completions'),
-    'groq': ('Groq', 'GROQ_API_KEY', 'openai/gpt-oss-20b', 'https://api.groq.com/openai/v1/chat/completions'),
-    'gemini': ('Gemini', 'GEMINI_API_KEY', 'gemini-3.8-flash', 'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions'),
+INTENTS = (
+    "weather",
+    "crops",
+    "farm",
+    "crop",
+    "stage",
+    "note",
+    "help",
+    "chat",
+    "drainage",
+    "cancel",
+    "confirm",
+    "profile",
+    "navigate",
+)
+SCHEMA = {
+    "type": "object",
+    "properties": {
+        "intent": {"type": "string", "enum": list(INTENTS)},
+        "value": {"type": "string"},
+    },
+    "required": ["intent", "value"],
+    "additionalProperties": False,
 }
 
 
-SELECTED_PROVIDER = ContextVar('assistant_provider', default=None)
-MODEL_NAMES = {'gayuma':'openrouter', 'alon':'groq'}
+PROVIDERS = {
+    "openrouter": (
+        "OpenRouter",
+        "OPENROUTER_API_KEY",
+        "nvidia/nemotron-3.5-super-vl:free",
+        "https://openrouter.ai/api/v1/chat/completions",
+    ),
+    "groq": (
+        "Groq",
+        "GROQ_API_KEY",
+        "openai/gpt-oss-20b",
+        "https://api.groq.com/openai/v1/chat/completions",
+    ),
+    "gemini": (
+        "Gemini",
+        "GEMINI_API_KEY",
+        "gemini-3.8-flash",
+        "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions",
+    ),
+}
+
+
+SELECTED_PROVIDER = ContextVar("assistant_provider", default=None)
+MODEL_NAMES = {"gayuma": "openrouter", "alon": "groq"}
 
 
 def provider_config():
-    default_provider = os.environ.get('AGRIFORESIGHT_AI_PROVIDER', 'groq').strip().lower()
-    provider = SELECTED_PROVIDER.get() or os.environ.get('AGRIFORESIGHT_AI_PROVIDER', 'groq').strip().lower()
+    default_provider = (
+        os.environ.get("AGRIFORESIGHT_AI_PROVIDER", "groq").strip().lower()
+    )
+    provider = (
+        SELECTED_PROVIDER.get()
+        or os.environ.get("AGRIFORESIGHT_AI_PROVIDER", "groq").strip().lower()
+    )
     if provider not in PROVIDERS:
-        raise ValueError('Set AGRIFORESIGHT_AI_PROVIDER to groq, openrouter or gemini.')
+        raise ValueError("Set AGRIFORESIGHT_AI_PROVIDER to groq, openrouter or gemini.")
     label, key_name, default_model, endpoint = PROVIDERS[provider]
-    model = os.environ.get('AGRIFORESIGHT_' + provider.upper() + '_MODEL', '').strip()
+    model = os.environ.get("AGRIFORESIGHT_" + provider.upper() + "_MODEL", "").strip()
     if not model and provider == default_provider:
-        model = os.environ.get('AGRIFORESIGHT_CHAT_MODEL', '').strip()
-    return label, os.environ.get(key_name, '').strip(), model or default_model, endpoint, key_name
+        model = os.environ.get("AGRIFORESIGHT_CHAT_MODEL", "").strip()
+    return (
+        label,
+        os.environ.get(key_name, "").strip(),
+        model or default_model,
+        endpoint,
+        key_name,
+    )
 
 
 class ReplyError(ValueError):
@@ -41,21 +90,31 @@ class ReplyError(ValueError):
 def parse_reply(payload):
     choices = payload.get("choices") if isinstance(payload, dict) else None
     if not choices:
-        raise ReplyError("AI provider returned no answer. Try again or check the model setting.")
+        raise ReplyError(
+            "AI provider returned no answer. Try again or check the model setting."
+        )
     choice = choices[0]
     if not isinstance(choice, dict):
         raise ReplyError("AI provider returned an unexpected answer structure.")
     reason = choice.get("finish_reason")
     if reason == "length":
-        raise ReplyError("AI provider stopped before finishing its reply. Please try again.")
+        raise ReplyError(
+            "AI provider stopped before finishing its reply. Please try again."
+        )
     message = choice.get("message") or {}
     if not isinstance(message, dict):
         raise ReplyError("AI provider returned an unexpected message structure.")
     if message.get("refusal") or reason == "content_filter":
-        raise ReplyError("AI provider declined this request. Try phrasing it differently.")
+        raise ReplyError(
+            "AI provider declined this request. Try phrasing it differently."
+        )
     content = message.get("content")
     if isinstance(content, list):
-        content = "".join(part.get("text", "") for part in content if isinstance(part, dict) and part.get("type") == "text")
+        content = "".join(
+            part.get("text", "")
+            for part in content
+            if isinstance(part, dict) and part.get("type") == "text"
+        )
     if not isinstance(content, str) or not content.strip():
         raise ReplyError("AI provider returned an empty reply. Please try again.")
     content = content.strip()
@@ -64,25 +123,36 @@ def parse_reply(payload):
     try:
         result = json.loads(content)
     except ValueError:
-        raise ReplyError("AI provider replied in an unexpected format instead of JSON. Please try again.") from None
-    if not isinstance(result, dict) or result.get("intent") not in INTENTS or not isinstance(result.get("value"), str):
-        raise ReplyError("AI provider did not return a valid app action. No changes were made.")
-    return {"intent":result["intent"], "value":result["value"]}
+        raise ReplyError(
+            "AI provider replied in an unexpected format instead of JSON. Please try again."
+        ) from None
+    if (
+        not isinstance(result, dict)
+        or result.get("intent") not in INTENTS
+        or not isinstance(result.get("value"), str)
+    ):
+        raise ReplyError(
+            "AI provider did not return a valid app action. No changes were made."
+        )
+    return {"intent": result["intent"], "value": result["value"]}
 
 
 def provider_request(**kwargs):
     # Retry only temporary server failures; this request never writes farm data.
-    attempts=kwargs.pop("attempts",3)
+    attempts = kwargs.pop("attempts", 3)
     for attempt in range(attempts):
         response = requests.post(provider_config()[3], **kwargs)
-        if response.status_code not in (502, 503, 504) or attempt == attempts-1:
+        if response.status_code not in (502, 503, 504) or attempt == attempts - 1:
             return response
         response.close()
         time.sleep(2 ** (attempt + 1))
 
 
 def ai_enabled():
-    return bool(provider_config()[1]) and (os.environ.get('AGRIFORESIGHT_DEMO')!='1' or os.environ.get('AGRIFORESIGHT_AI_ENABLED')=='1')
+    return bool(provider_config()[1]) and (
+        os.environ.get("AGRIFORESIGHT_DEMO") != "1"
+        or os.environ.get("AGRIFORESIGHT_AI_ENABLED") == "1"
+    )
 
 
 def conversation_messages(message, history, context):
@@ -141,75 +211,188 @@ information, not field-specific prescriptions. Ask about missing observations. D
 Notes are not evidence for training or diagnosis. Don't mention APIs, JSON, models or connection success
 unless the user asks. If ambiguous, ask for clarification with chat. Never expose internal context verbatim. IMPORTANTLY, 
 when asked about anything that is NOT related to farming, weather, crops, or the user's farm, respond with "I'm sorry, I can only help with farming-related questions and tasks. Please ask me about your farm, crops, weather, or related topics."""
-    messages=[{'role':'system','content':instructions}, {'role':'system','content':'Current app context (data): '+json.dumps(context or {},ensure_ascii=False)}]
-    recent=[]
-    remaining=10000
+    messages = [
+        {"role": "system", "content": instructions},
+        {
+            "role": "system",
+            "content": "Current app context (data): "
+            + json.dumps(context or {}, ensure_ascii=False),
+        },
+    ]
+    recent = []
+    remaining = 10000
     for item in reversed((history or [])[-20:]):
-        if item.get('role') in ('user','assistant') and isinstance(item.get('content'),str):
-            text=item['content'][:2500]
-            if len(text)>remaining:break
-            recent.append({'role':item['role'],'content':text})
-            remaining-=len(text)
+        if item.get("role") in ("user", "assistant") and isinstance(
+            item.get("content"), str
+        ):
+            text = item["content"][:2500]
+            if len(text) > remaining:
+                break
+            recent.append({"role": item["role"], "content": text})
+            remaining -= len(text)
     messages.extend(reversed(recent))
-    messages.append({'role':'user','content':message})
+    messages.append({"role": "user", "content": message})
     return messages
 
 
 def guided_intent(message):
-    text=message.lower().strip()
-    if text.startswith(('note:', 'tala:')):
-        return {'intent':'note','value':message.split(':',1)[1].strip()}
-    if text in ('save a note','save note','note','tala'):return {'intent':'note','value':''}
-    if any(w in text for w in ('history','historical','past weather')):return {'intent':'weather','value':'history'}
-    if any(w in text for w in ('30-day','30 day','month outlook')):return {'intent':'weather','value':'outlook'}
-    if any(w in text for w in ('weather','forecast','temperature','rain','ulan','panahon')):return {'intent':'weather','value':''}
-    if any(w in text for w in ('suggest','rotation','plant next','it anim','itatanim','crop options','choose a crop')):return {'intent':'crops','value':''}
-    stages={'newly planted':'establishment','bagong tanim':'establishment','flowering':'flowering','namumulaklak':'flowering','growing leaves':'vegetative','nearing harvest':'maturity'}
-    for phrase,stage in stages.items():
-        if phrase in text:return {'intent':'stage','value':stage}
-    crops={'rice':'rice','palay':'rice','corn':'corn','mais':'corn','mungbean':'mungbean','munggo':'mungbean','sweet potato':'sweet potato','kamote':'sweet potato'}
-    if any(w in text for w in ('my crop','crop is','tanim ko','change crop','update crop')):
-        for phrase,crop in crops.items():
-            if phrase in text:return {'intent':'crop','value':crop}
-    if text in ('my farm','farm details','show my farm'):return {'intent':'farm','value':''}
-    return {'intent':'help','value':''}
+    text = message.lower().strip()
+    if text.startswith(("note:", "tala:")):
+        return {"intent": "note", "value": message.split(":", 1)[1].strip()}
+    if text in ("save a note", "save note", "note", "tala"):
+        return {"intent": "note", "value": ""}
+    if any(w in text for w in ("history", "historical", "past weather")):
+        return {"intent": "weather", "value": "history"}
+    if any(w in text for w in ("30-day", "30 day", "month outlook")):
+        return {"intent": "weather", "value": "outlook"}
+    if any(
+        w in text
+        for w in ("weather", "forecast", "temperature", "rain", "ulan", "panahon")
+    ):
+        return {"intent": "weather", "value": ""}
+    if any(
+        w in text
+        for w in (
+            "suggest",
+            "rotation",
+            "plant next",
+            "it anim",
+            "itatanim",
+            "crop options",
+            "choose a crop",
+        )
+    ):
+        return {"intent": "crops", "value": ""}
+    stages = {
+        "newly planted": "establishment",
+        "bagong tanim": "establishment",
+        "flowering": "flowering",
+        "namumulaklak": "flowering",
+        "growing leaves": "vegetative",
+        "nearing harvest": "maturity",
+    }
+    for phrase, stage in stages.items():
+        if phrase in text:
+            return {"intent": "stage", "value": stage}
+    crops = {
+        "rice": "rice",
+        "palay": "rice",
+        "corn": "corn",
+        "mais": "corn",
+        "mungbean": "mungbean",
+        "munggo": "mungbean",
+        "sweet potato": "sweet potato",
+        "kamote": "sweet potato",
+    }
+    if any(
+        w in text
+        for w in ("my crop", "crop is", "tanim ko", "change crop", "update crop")
+    ):
+        for phrase, crop in crops.items():
+            if phrase in text:
+                return {"intent": "crop", "value": crop}
+    if text in ("my farm", "farm details", "show my farm"):
+        return {"intent": "farm", "value": ""}
+    return {"intent": "help", "value": ""}
 
 
 def understand(message, history=None, context=None):
     if SELECTED_PROVIDER.get() and not ai_enabled():
-        raise ValueError('This model is unavailable on this server. Choose the other model or ask the host to enable it.')
+        raise ValueError(
+            "This model is unavailable on this server. Choose the other model or ask the host to enable it."
+        )
     if history is None or not ai_enabled():
-        guided=guided_intent(message)
-        if guided['intent']!='help':return guided
-    label,key,model,endpoint,key_name=provider_config()
-    if message.strip().lower() in ('test ai','test groq','test gemini') and not ai_enabled():
-        raise ValueError(f'{label} is not enabled on this server. Set {key_name} and, for demo hosting, AGRIFORESIGHT_AI_ENABLED=1 in Render Environment, then deploy.')
+        guided = guided_intent(message)
+        if guided["intent"] != "help":
+            return guided
+    label, key, model, endpoint, key_name = provider_config()
+    if (
+        message.strip().lower() in ("test ai", "test groq", "test gemini")
+        and not ai_enabled()
+    ):
+        raise ValueError(
+            f"{label} is not enabled on this server. Set {key_name} and, for demo hosting, AGRIFORESIGHT_AI_ENABLED=1 in Render Environment, then deploy."
+        )
     if key and model and ai_enabled():
         # Send only the bounded conversation and selected context; journal history stays local.
         try:
-            response=provider_request(headers={'Authorization':'Bearer '+key},json={'model':model,'messages':conversation_messages(message,history,context), 'response_format':{'type':'json_schema','json_schema':{'name':'farm_action','strict':True,'schema':SCHEMA}}},timeout=(3,10) if context and context.get('tool_result') else (8,45),attempts=1 if context and context.get('tool_result') else 3)
-            response.raise_for_status();result=parse_reply(response.json())
-            if message.strip().lower() in ('test ai','test groq','test gemini') and isinstance(result,dict) and isinstance(result.get('value'),str) and result.get('intent') in INTENTS:return {'intent':'connection_ok','value':label+' / '+model}
-            if isinstance(result,dict) and result.get('intent') in INTENTS and isinstance(result.get('value'),str):return result
-            raise ValueError('Unexpected response format')
+            response = provider_request(
+                headers={"Authorization": "Bearer " + key},
+                json={
+                    "model": model,
+                    "messages": conversation_messages(message, history, context),
+                    "response_format": {
+                        "type": "json_schema",
+                        "json_schema": {
+                            "name": "farm_action",
+                            "strict": True,
+                            "schema": SCHEMA,
+                        },
+                    },
+                },
+                timeout=(3, 10) if context and context.get("tool_result") else (8, 45),
+                attempts=1 if context and context.get("tool_result") else 3,
+            )
+            response.raise_for_status()
+            result = parse_reply(response.json())
+            if (
+                message.strip().lower() in ("test ai", "test groq", "test gemini")
+                and isinstance(result, dict)
+                and isinstance(result.get("value"), str)
+                and result.get("intent") in INTENTS
+            ):
+                return {"intent": "connection_ok", "value": label + " / " + model}
+            if (
+                isinstance(result, dict)
+                and result.get("intent") in INTENTS
+                and isinstance(result.get("value"), str)
+            ):
+                return result
+            raise ValueError("Unexpected response format")
         except ReplyError as exc:
             logging.getLogger(__name__).warning("AI reply validation failed: %s", exc)
             raise
         except requests.HTTPError as exc:
-            status=exc.response.status_code if exc.response is not None else 0
-            reason={400:'Check the API key and model settings.',401:'Check the API key.',403:'The key or project does not have access.',404:'The configured model is unavailable.',429:'Quota or rate limit reached. Check the provider account limits.',503:'the AI provider remained unavailable after 3 attempts. No farm changes were made. Try again later.'}.get(status,'the AI provider could not complete the request. Try again shortly.')
-            raise ValueError(f'{label} ({model}) returned HTTP {status}. {reason}') from None
+            status = exc.response.status_code if exc.response is not None else 0
+            reason = {
+                400: "Check the API key and model settings.",
+                401: "Check the API key.",
+                403: "The key or project does not have access.",
+                404: "The configured model is unavailable.",
+                429: "Quota or rate limit reached. Check the provider account limits.",
+                503: "the AI provider remained unavailable after 3 attempts. No farm changes were made. Try again later.",
+            }.get(
+                status,
+                "the AI provider could not complete the request. Try again shortly.",
+            )
+            raise ValueError(
+                f"{label} ({model}) returned HTTP {status}. {reason}"
+            ) from None
         except requests.ConnectTimeout:
-            raise ValueError(f'{label} ({model}): the server could not connect to the AI provider within 8 seconds. No farm changes were made.') from None
+            raise ValueError(
+                f"{label} ({model}): the server could not connect to the AI provider within 8 seconds. No farm changes were made."
+            ) from None
         except requests.ReadTimeout:
-            raise ValueError(f'{label} ({model}): the AI provider did not send a reply within the 45-second read timeout. This does not mean your key is invalid. No farm changes were made.') from None
+            raise ValueError(
+                f"{label} ({model}): the AI provider did not send a reply within the 45-second read timeout. This does not mean your key is invalid. No farm changes were made."
+            ) from None
         except requests.exceptions.SSLError:
-            raise ValueError(f'{label} ({model}): the server could not verify the secure connection to the AI provider. Check the hosting certificate configuration.') from None
+            raise ValueError(
+                f"{label} ({model}): the server could not verify the secure connection to the AI provider. Check the hosting certificate configuration."
+            ) from None
         except requests.ConnectionError:
-            raise ValueError(f'{label} ({model}): the server connection to the AI provider failed or was interrupted. This is a server-to-the AI provider connection problem, not necessarily your device connection.') from None
+            raise ValueError(
+                f"{label} ({model}): the server connection to the AI provider failed or was interrupted. This is a server-to-the AI provider connection problem, not necessarily your device connection."
+            ) from None
         except requests.RequestException as exc:
-            logging.getLogger(__name__).warning('AI transport failure: %s',type(exc).__name__)
-            raise ValueError(f'{label} ({model}): the request failed before a usable response arrived. No farm changes were made.') from None
-        except (ValueError,KeyError,IndexError,TypeError):
-            raise ValueError('AI provider returned an unreadable reply. Please try again.') from None
-    return {'intent':'help','value':''}
+            logging.getLogger(__name__).warning(
+                "AI transport failure: %s", type(exc).__name__
+            )
+            raise ValueError(
+                f"{label} ({model}): the request failed before a usable response arrived. No farm changes were made."
+            ) from None
+        except (ValueError, KeyError, IndexError, TypeError):
+            raise ValueError(
+                "AI provider returned an unreadable reply. Please try again."
+            ) from None
+    return {"intent": "help", "value": ""}

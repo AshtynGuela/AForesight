@@ -1,31 +1,965 @@
-<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#215b43"><title>AgriForesight · Farm planning</title><link rel="manifest" href="/static/manifest.json"><link rel="icon" href="/static/icon.svg"><link rel="stylesheet" href="/static/style.css"><script src="/static/app.js" defer></script><script src="/static/chat.js" defer></script><script src="/static/overview.js" defer></script><link rel="stylesheet" href="/static/overview.css"></head><body data-page="overview">
-<header><div class="brand"><img src="/static/assistant-mark.svg" alt="AgriForesight" width="44" height="44"><div><strong>AgriForesight</strong><small>FARM PLANNING · PHILIPPINES</small></div></div><span id="connection" class="pill">Connecting…</span></header>
-<div class="layout"><aside><nav aria-label="Main navigation"><button data-tab="overview" class="selected">Farm overview</button><button data-tab="forecasts">Forecasts</button><button data-tab="planting">Crop plans</button><button data-tab="climate">Weather data</button><button data-tab="farm">My farm & soil</button><button data-tab="journal">Field journal</button><button data-tab="learn">Methods & sources</button></nav><div class="aside-note">A little help around the farm.<p>Check the weather. Ask about your crop. Keep a few notes.</p><span class="pill">Research prototype · v0.4</span></div></aside>
-<main><div id="demo-banner" class="banner" hidden><strong>Shared demo</strong> · Everyone uses the same sample farm. Please use made-up details and notes. Records can reset when the demo sleeps or restarts.</div><div class="context-toolbar"><div id="shared-context">Getting your farm…</div><div class="actions"><button class="secondary" data-go="farm">Edit farm</button><button class="secondary" data-go="climate">Edit weather data</button></div></div><details class="panel" id="period-panel" open><summary>Choose past dates — up to a year</summary><form id="period-form"><div class="form-grid"><label>From<input name="start" id="period-start" type="date" value="2026-10-01" required></label><label>To<input name="end" id="period-end" type="date" value="2026-10-31" required></label><label>Weather source<select name="provider"><option value="nasa">NASA POWER · past weather</option><option value="era5">ERA5 · another past-weather source</option><option value="saved">Use saved records · no download</option></select></label></div><div class="actions"><button type="submit">Use these dates</button><button type="button" id="october-preset" class="secondary">October 2026</button></div><p class="source">Pick some dates to look back on, or review past weather. Earlier weather is saved too, in case you want to test a forecast.</p></form></details><div id="notice" role="status" aria-live="polite"></div><div id="offline" class="banner" hidden>The app can’t reach the server, so you’re seeing saved records. You can still jot down notes here.</div>
-<section id="overview" class="page"><div class="eyebrow">FARM OVERVIEW</div><h1>How’s the farm looking?</h1><p class="lead">Have a look at your farm and the weather.</p><div class="topline"><h2 id="farm-title">My farm</h2><button class="secondary" data-go="farm">Edit farm</button></div><div id="farm-summary" class="farm-summary"></div><div class="stats"><article><span id="rain-label">Total rainfall</span><strong id="rain-stat">—</strong><small id="rain-caption">All the rain over these dates</small></article><article><span id="temp-label">Average past temperature</span><strong id="temp-stat">—</strong><small id="temp-caption">For the past dates you picked</small></article><article><span>Soil pH</span><strong id="ph-stat">—</strong><small id="soil-status">No reading yet</small></article></div><p id="provenance" class="source"></p><div class="panel"><h2>When did it rain?</h2><p id="rainfall-source" class="source"></p><div class="rainfall-stats"><article><span id="dry-spell-label">Longest dry spell</span><strong id="dry-spell-value">—</strong><small id="dry-spell-caption">Days in a row with less than 1 mm of rain</small></article><article><span>Heaviest rain day</span><strong id="heaviest-rain-value">—</strong><small id="heaviest-rain-caption">No daily reading yet</small></article></div><div id="overview-rainfall-chart" class="plot"></div><details><summary>Daily rainfall amounts</summary><div id="overview-rainfall-readings"></div></details></div><div class="quick-actions"><button data-go="forecasts">See the weather →</button></div><div class="section-heading"><div><h2>Suggested actions</h2><p>A few things to check, based on your crop and the weather.</p></div><span class="pill">With sources</span></div><p class="source">Start with a look around the field. Tap “Why this advice?” if you want the details.</p><div id="recommendations" class="cards"></div><div class="panel"><h3>Field records</h3><p id="history-note"></p><button data-go="journal" class="secondary">Open journal</button></div></section>
-<section id="forecasts" class="page" hidden><div class="eyebrow">FORECASTS</div><h1>Weather for your farm</h1><p class="lead">Rain coming? Here’s what the forecast says.</p><div class="panel"><div class="view-switch" role="group" aria-label="Weather dates"><button type="button" id="weather-next">Next 7 days</button><button type="button" id="weather-past" class="secondary">Past dates</button></div><div class="actions"><button id="simple-weather-update">Update weather</button><button id="simple-weather-dates" class="secondary">Choose past dates</button></div><p class="source">This is for your saved farm location. The source and last update are below.</p></div><div class="panel"><h2>A look at the next 30 days</h2><p>Useful for planning ahead. Check the short-range forecast again before planting or watering.</p><button id="month-update">Load 30-day outlook</button><div id="month-result"></div></div><div id="simple-weather-summary" class="weather-summary" aria-live="polite"></div><div id="simple-weather-days" class="weather-days"></div><details class="panel"><summary>Where this weather comes from</summary><div id="simple-weather-source"></div></details><div class="section-heading"><h2>What you can do</h2></div><p class="source">Have a look at the field before changing your watering. If you’re viewing past dates, treat this as practice.</p><div id="forecast-actions" class="cards"></div><details class="panel" id="forecast-advanced"><summary>Want to compare the forecasts?</summary><p class="source">You can skip this bit. Trying a sample here won’t change the weather cards for your farm.</p><div class="panel"><div class="form-grid"><label>Dates to test<select id="model-mode"><option value="forward">7 days after the saved records</option><option value="replay">Test the past dates you picked</option></select></label><label>App forecast method<select id="model-method"><option value="auto">Let the app pick from earlier tests</option><option value="ridge">Try ridge regression</option><option value="baseline">Try the 14-day average</option></select></label><label>Weather records to use<select id="model-dataset"><option value="current">Saved farm weather data</option><option value="legazpi">Legazpi sample</option><option value="naga">Naga sample</option></select></label><div><p class="source">These samples are just for trying things out. Your farm details and records stay as they are.</p></div></div><div class="actions"><button id="build-model">Build and check the app forecast</button><button id="load-forecast" class="secondary">Update live Open-Meteo</button><button id="load-comparison" class="secondary">Compare past forecasts</button></div><p class="source">Updating Open-Meteo shares your farm coordinates with them. The app’s own forecast uses saved weather records; your notes stay out of it.</p></div>
-<div id="model-status" class="inline-status">Build an app forecast to see how it did on past weather.</div><div id="model-actions" class="cards"></div><div class="comparison-heading"><h2>Daily comparison</h2><label>What to show<select id="forecast-variable"><option value="temp">Mean temperature (°C)</option><option value="rain">Rainfall (mm/day)</option></select></label></div><div class="panel"><div id="comparison-chart" class="plot"></div><div class="legend"><span class="internal-key">Internal forecast</span><span class="provider-key">Open-Meteo</span><span class="reference-key">Historical reference</span></div><div id="forecast-comparison"></div></div>
-<div class="panel"><h2>Historical test scores</h2><div id="replay-metrics"></div></div><div class="panel"><h2>How the past tests went</h2><p>The app tries both methods on earlier dates, then checks the winner on later dates it hasn’t used to choose the method.</p><div id="model-metrics"></div><details><summary>How the app picks a method</summary><p class="source">The app compares ridge regression with a simple 14-day average. Regression uses the last 14 days, time of year and how far ahead it’s predicting. It needs at least 365 usable days of non-synthetic data and must lower earlier validation MAE by 2%. The later test scores don’t choose the winner. Error ranges come from past errors at the same forecast lead; they aren’t a guaranteed confidence level. Rain is especially hard to predict from these inputs.</p></details></div>
-<div class="panel"><h2>Saved forecast accuracy</h2><div id="archive-evaluation"></div><p class="source">Scores need forecasts saved before the day happened, plus weather records loaded afterwards. Two forecasts disagreeing doesn’t tell us which was right. NASA POWER estimates weather over a grid, rather than measuring it at your farm. Its daily cutoffs can also differ from the forecast’s.</p></div>
-<div class="panel"><h2>Open-Meteo daily detail</h2><div id="forecast-result"></div><p class="source">Weather data by <a href="https://open-meteo.com/" target="_blank" rel="noreferrer">Open-Meteo</a> · CC BY 4.0. Updates are saved for three hours.</p></div></details></section>
-<section id="planting" class="page" hidden><h1>What could I plant next?</h1><p>Let’s compare crops using your saved farm details and the latest saved weather.</p><div class="panel"><label>Does water stand in the field after rain?<select id="suggest-drainage"><option value="unknown">Not sure</option><option value="good">No, it drains well</option><option value="poor">Yes, water tends to stand</option></select></label><button id="suggest-crops">Find options for my farm</button><p>Save any changes in My farm & soil first. These suggestions use your current crop as the crop you’re rotating out of.</p></div><div id="crop-suggestions"></div><details class="panel"><summary>Make a calendar once you’ve picked a crop</summary><form id="crop-plan-form" class="panel"><div class="form-grid"><label>Last crop<select name="previous_crop"><option>rice</option><option>corn</option><option>mungbean</option><option>sweet potato</option><option>unknown</option></select></label><label>Next crop<select name="crop"><option>mungbean</option><option>rice</option><option>corn</option><option>sweet potato</option></select></label><label>Possible planting date<input name="start" type="date" required></label><label>Days to harvest for your variety<input name="duration" type="number" min="45" max="240" value="100" required></label><label>Does the field drain well?<select name="drainage"><option value="unknown">Not sure</option><option value="good">Yes</option><option value="poor">Water tends to stand</option></select></label></div><p>Check the seed label or ask your technician for the crop duration. The number above is just a starting example.</p><button>See my planting plan</button></form><div id="crop-plan-result" class="panel">Pick a crop and date to get started.</div></details></section><section id="climate" class="page" hidden><div class="eyebrow">WEATHER DATA</div><h1>Your weather records</h1><p class="lead">Get past weather, add your own records or fix a missing day.</p><details class="panel"><summary>Replace the saved weather records</summary><p class="source">To look at a month, use “Choose past dates” above. Downloading here replaces the weather records used for training and clears those selected dates.</p><form id="climate-form" class="panel"><h2>NASA POWER history</h2><div class="form-grid"><label>Start date<input id="start-date" name="start" type="date" required></label><label>End date<input id="end-date" name="end" type="date" required></label></div><div class="actions"><button type="submit">Load historical weather</button><button id="recent-history" type="button" class="secondary">Use latest 2-year window</button><button id="demo" type="button" class="secondary">Try made-up example data</button></div><p class="source">You can load up to 1,096 days. The newest days may be missing. NASA estimates weather over a grid; these aren’t farm sensor readings. NASA and Open-Meteo can also use different daily cutoffs.</p></form></details>
-<div class="panel"><h2>Import daily weather records</h2><p>CSV headers: <code>date,temp,rain</code>. Use YYYY-MM-DD, mean temperature in °C, and daily rain in mm. Each date must be unique and earlier than today.</p><label>CSV file<input id="history-file" type="file" accept=".csv,text/csv"></label><button id="import-history" class="secondary">Import for saved farm coordinates</button><p class="source">Use records for this farm location only. They’ll be marked as added by you and not checked. Importing replaces the current weather records, but keeps your farm details and notes.</p></div>
-<div class="panel"><h2>Edit daily weather records</h2><p>Pick a date below or type one here. Your changes are marked as not checked, and you can restore an older copy. You’ll need to build the forecast again after an edit.</p><form id="weather-record-form"><div class="form-grid"><label>Record date<input name="date" type="date" required></label><label>Mean temperature (°C)<input name="temp" type="number" min="-60" max="65" step=".01" required></label><label>Daily rain (mm)<input name="rain" type="number" min="0" max="3000" step=".01" required></label></div><div class="actions"><button type="submit">Save / add record</button><button id="delete-weather-record" type="button" class="secondary">Remove this record</button></div></form><details><summary>Restore a previous weather dataset</summary><div class="actions"><select id="history-backup" aria-label="Previous weather dataset"></select><button id="restore-weather" class="secondary">Restore selected version</button></div></details></div><div class="panel"><h2>Daily history</h2><p id="chart-source" class="source"></p><div class="comparison-heading"><label>Variable<select id="history-variable"><option value="rain">Rainfall (mm)</option><option value="temp">Mean temperature (°C)</option></select></label></div><div id="history-chart" class="plot"></div><details><summary>View all daily readings</summary><div class="table-scroll"><table><thead><tr><th>Date</th><th>Rain (mm)</th><th>Mean temp (°C)</th><th>Edit</th></tr></thead><tbody id="climate-rows"></tbody></table></div></details></div></section>
-<section id="farm" class="page" hidden>
-<div class="eyebrow">YOUR FARM</div><h1>Set up your farm</h1><p class="lead">Add your farm’s coordinates. We’ll look up the town and province, then you can fill in the rest.</p>
-<form id="farm-form">
-<div class="panel"><div class="section-heading"><div><span class="step-label">STEP 1</span><h2>Locate your field</h2></div><span class="pill">Philippines only</span></div>
-<p>Enter decimal coordinates from your GPS or map. Latitude comes first. Example: <strong>13.1391, 123.7438</strong> (Legazpi).</p>
-<div class="form-grid"><label>Latitude<input name="latitude" type="number" min="4" max="22" step="any" required></label><label>Longitude<input name="longitude" type="number" min="116" max="127" step="any" required></label></div>
-<div class="actions"><button id="lookup-location" type="button">Find farm location</button><button id="device-location" type="button" class="secondary">Use this device’s GPS</button></div>
-<p id="gps-status" class="source">At the farm right now? You can use your device’s GPS.</p>
-<div id="location-status" class="inline-status" role="status">Find the location to see the town and province.</div>
-<div id="location-result" hidden><div class="location-grid"><div><dl id="location-details" class="detail-list"></dl><a id="osm-link" target="_blank" rel="noreferrer">Open this point in OpenStreetMap ↗</a></div><div><div id="location-map" class="local-map"></div><p class="source">The dot is your chosen spot. Open the map to take a closer look.</p></div></div><p class="source">Boundary data: <a href="https://www.geoboundaries.org/api.html" target="_blank" rel="noreferrer">geoBoundaries</a> / NAMRIA, PSA, OCHA Philippines · CC BY 3.0 IGO. 2020 Data.</p><button id="apply-location" type="button" class="secondary">Use this municipality in my profile</button></div>
-</div>
-<div class="panel"><span class="step-label">STEP 2</span><h2>Field details</h2><p class="source">Fill in what you know. The map can find the place, but you’ll need to add the area, crop and water source.</p><div class="form-grid"><label>Farm name<input name="name" required maxlength="120"></label><label>Town / province — you can edit this<input name="municipality" required maxlength="120"></label><label>Area (hectares)<input name="area" type="number" min=".01" max="10000" step="any" required></label><label>Field setting<select name="terrain"><option value="lowland">Lowland</option><option value="upland">Upland</option><option value="coastal">Coastal</option></select></label><label>Water source<select name="water"><option value="rainfed">Rainfed</option><option value="irrigated">Irrigated</option></select></label><label>Planned / current crop<select name="crop" class="crop-options"></select></label><label>Previous crop<select name="previous_crop" class="crop-options"><option value="unknown">Unknown</option></select></label><label>Crop stage<select name="crop_stage"><option value="unknown">Unknown / not planted</option><option value="preparation">Preparation</option><option value="establishment">Newly planted</option><option value="vegetative">Growing leaves / tillering</option><option value="flowering">Flowering</option><option value="maturity">Ripening / nearing harvest</option><option value="harvest">Harvest</option></select></label><label>Planting date<input name="planting_date" type="date"></label></div></div>
-<div class="panel"><span class="step-label">STEP 3 · OPTIONAL</span><h2>Add measured soil readings</h2><p class="source">No reading? Just leave it blank. The map and weather can’t tell us what’s in your soil.</p><div class="form-grid"><label>Sample date<input name="sample_date" type="date"></label><label>Measurement method<select name="soil_method"><option value="unknown">Unknown / not measured</option><option value="lab">Laboratory</option><option value="sensor">Sensor</option><option value="field kit">Field kit</option></select></label><label>Current pH<input name="ph" type="number" min="0" max="14" step=".01" placeholder="Not measured"></label><label>Previous pH (comparable sample)<input name="previous_ph" type="number" min="0" max="14" step=".01" placeholder="Optional"></label><label>Nitrogen (mg/kg)<input name="nitrogen" type="number" min="0" max="100000" step="any" placeholder="Not measured"></label><label>Phosphorus (mg/kg)<input name="phosphorus" type="number" min="0" max="100000" step="any" placeholder="Not measured"></label><label>Potassium (mg/kg)<input name="potassium" type="number" min="0" max="100000" step="any" placeholder="Not measured"></label></div><label class="check"><input name="ash" type="checkbox"> I’ve seen volcanic ash on this field</label></div>
-<div class="save-bar"><span>We’ll check that the location is inside the saved Philippine boundaries when you save.</span><button type="submit">Save my farm</button></div>
-</form></section>
-<section id="journal" class="page" hidden><div class="eyebrow">YOUR NOTES</div><h1>Farm journal</h1><p class="lead">Jot down what you tried and how it went. You can save notes offline too.</p><form id="journal-form" class="panel"><div class="form-grid"><label>Date<input name="date" id="journal-date" type="date" required></label><label>Crop<select name="crop" class="crop-options"></select></label><label>What did you try?<input name="technique" required maxlength="120" placeholder="e.g. Added rice-straw mulch"></label><label>How did it go?<select name="outcome"><option value="unobserved">Too early to tell</option><option value="better">Better than expected</option><option value="same">As expected</option><option value="worse">Worse than expected</option></select></label><label>Harvest (kg, optional)<input name="yield_kg" type="number" min="0" max="10000000" step="any"></label></div><label>Field notes<textarea name="note" required maxlength="2000" rows="3" placeholder="What did you observe? Include dates, soil test methods or crop stress."></textarea></label><button type="submit">Save note</button></form><div class="section-heading"><h2>Saved notes</h2><button id="sync" class="secondary">Sync saved notes</button></div><p id="queue-status" class="source"></p><div id="journal-list" class="cards"></div><button id="export" class="secondary">Export my records (JSON)</button></section>
-<section id="learn" class="page" hidden><div class="eyebrow">METHODS & SOURCES</div><h1>How this works</h1><div class="panel"><h2>Forecasts</h2><p>The app uses your saved weather to estimate daily rain and average temperature. It tries regression and a 14-day average on earlier dates, then checks the chosen method on later dates. Local station readings are only included if you import them. Open-Meteo uses weather models with more atmospheric information.</p><p>Compare the same dates, location and weather measurement. We don’t show percentage errors for temperature in °C. Rainfall MAPE leaves out days below 1 mm, where percentages become misleading; MAE and RMSE still use all usable days.</p></div><div class="panel"><h2>Data and field records</h2><p>The Legazpi and Naga samples come from NASA POWER, with their dates and download details kept. Made-up examples are labelled. Your notes are saved for later study; they don’t feed the forecasts or advice.</p><p>The location lookup uses saved geoBoundaries maps from 2020 to find the town and province. It can’t check land ownership or measure your field. This version keeps one farm on the local server.</p></div><div class="panel"><h2>Agricultural references</h2><ul><li><a href="https://www.philrice.gov.ph/water-saving-practices-advised-as-el-nino-threat-looms/" target="_blank" rel="noreferrer">DA-PhilRice: water management and critical rice stages</a></li><li><a href="https://www.fao.org/4/x0490e/x0490e0e.htm" target="_blank" rel="noreferrer">FAO 56: soil-water availability and water balance</a></li><li><a href="https://www.pagasa.dost.gov.ph/ten-day-regional-agri-weather" target="_blank" rel="noreferrer">PAGASA: regional agricultural weather</a></li><li><a href="https://www.bswm.da.gov.ph/process/laboratory-services/" target="_blank" rel="noreferrer">BSWM: soil testing and laboratory services</a></li><li><a href="https://sarai.ph/" target="_blank" rel="noreferrer">Project SARAi portal</a> · reference only; no data integration</li></ul><p class="source">These are things to check in the field. The app’s weather cutoffs are starting points for review, not official warnings or locally tested crop limits.</p></div></section>
-<footer>AgriForesight · Farm planning research prototype · v0.4</footer></main></div><button id="chat-toggle" class="assistant-launcher" type="button" aria-expanded="false" aria-controls="assistant"><img src="/static/assistant-mark.svg" alt="" width="28" height="28">Ask for help</button><section id="assistant" class="assistant-panel" role="dialog" aria-modal="false" aria-labelledby="assistant-title" hidden><div class="assistant-top"><strong id="assistant-title">Farm assistant</strong><button id="chat-new" class="secondary" type="button" title="Clear this conversation and pending changes">New chat</button><button id="chat-close" class="secondary" type="button" aria-label="Minimise farm assistant">Close</button></div><div class="assistant-scroll"><div class="chat-heading"><img src="/static/assistant-mark.svg" alt="AgriForesight placeholder sprout logo" width="64" height="64"><div><span class="eyebrow">YOUR FARM ASSISTANT</span><h2>Need a hand?</h2><p>Tell me what’s happening on your farm. We’ll take it from there.</p></div></div><div class="chat-starters"><button data-chat="Check weather">☀ Check the weather</button><button data-chat="Choose a crop">♧ Help me choose a crop</button><button data-chat="My farm">⌂ My farm details</button><button data-chat="Save a note">✎ Save a note</button></div><p class="source" id="chat-mode">Chat uses recent messages and basic farm details with your configured AI provider. Journal history stays out.</p><div id="chat-log" role="log" aria-live="polite" aria-label="Conversation"><article class="chat-bubble assistant">Hi! I can help with your weather, crop choices and notes. You can also say “my crop is rice” or “bagong tanim”.</article></div></div><form id="chat-form" class="chat-composer"><label for="chat-message">Your message</label><div><input id="chat-message" maxlength="2000" placeholder="Type here…" autocomplete="off" required><button id="chat-send">Send</button></div></form><p class="source">Farm changes and notes are shown for you to check before saving. This chat does not operate irrigation equipment.</p></section></body></html>
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <meta name="theme-color" content="#215b43" />
+    <title>AgriForesight · Farm planning</title>
+    <link rel="manifest" href="/static/manifest.json" />
+    <link rel="icon" href="/static/icon.svg" />
+    <link rel="stylesheet" href="/static/style.css" />
+    <script src="/static/app.js" defer></script>
+    <script src="/static/chat.js" defer></script>
+    <script src="/static/overview.js" defer></script>
+    <link rel="stylesheet" href="/static/overview.css" />
+    <link rel="stylesheet" href="/static/vendor/leaflet/leaflet.css" />
+    <link rel="stylesheet" href="/static/myfarm.css" />
+    <script src="/static/vendor/leaflet/leaflet.js" defer></script>
+    <script src="/static/myfarm.js" defer></script>
+    <link rel="stylesheet" href="/static/sidebar.css" />
+  </head>
+  <body data-page="overview">
+    <header>
+      <div class="brand">
+        <img
+          src="/static/assistant-mark.svg"
+          alt="AgriForesight"
+          width="44"
+          height="44"
+        />
+        <div>
+          <strong>AgriForesight</strong
+          ><small>FARM PLANNING · PHILIPPINES</small>
+        </div>
+      </div>
+      <span id="connection" class="pill">Connecting…</span>
+    </header>
+    <div class="layout">
+      <aside>
+        <nav aria-label="Main navigation">
+          <button data-tab="overview" class="selected">Farm overview</button
+          ><button data-tab="forecasts">Forecasts</button
+          ><button data-tab="planting">Crop plans</button
+          ><button data-tab="climate">Weather data</button
+          ><button data-tab="farm">My farm & soil</button
+          ><button data-tab="journal">Field journal</button
+          ><button data-tab="learn">Methods & sources</button>
+        </nav>
+        <div class="aside-note">
+          A little help around the farm.
+          <p>Check the weather. Ask about your crop. Keep a few notes.</p>
+          <span class="pill">Research prototype · v0.4</span>
+        </div>
+      </aside>
+      <main>
+        <div id="demo-banner" class="banner" hidden>
+          <strong>Shared demo</strong> · Everyone uses the same sample farm.
+          Please use made-up details and notes. Records can reset when the demo
+          sleeps or restarts.
+        </div>
+        <div class="context-toolbar">
+          <div id="shared-context">Getting your farm…</div>
+          <div class="actions">
+            <button class="secondary" data-go="farm">Edit farm</button
+            ><button class="secondary" data-go="climate">
+              Edit weather data
+            </button>
+          </div>
+        </div>
+        <details class="panel" id="period-panel" open>
+          <summary>Choose past dates — up to a year</summary>
+          <form id="period-form">
+            <div class="form-grid">
+              <label
+                >From<input
+                  name="start"
+                  id="period-start"
+                  type="date"
+                  value="2026-10-01"
+                  required /></label
+              ><label
+                >To<input
+                  name="end"
+                  id="period-end"
+                  type="date"
+                  value="2026-10-31"
+                  required /></label
+              ><label
+                >Weather source<select name="provider">
+                  <option value="nasa">NASA POWER · past weather</option>
+                  <option value="era5">
+                    ERA5 · another past-weather source
+                  </option>
+                  <option value="saved">Use saved records · no download</option>
+                </select></label
+              >
+            </div>
+            <div class="actions">
+              <button type="submit">Use these dates</button
+              ><button type="button" id="october-preset" class="secondary">
+                October 2026
+              </button>
+            </div>
+            <p class="source">
+              Pick some dates to look back on, or review past weather. Earlier
+              weather is saved too, in case you want to test a forecast.
+            </p>
+          </form>
+        </details>
+        <div id="notice" role="status" aria-live="polite"></div>
+        <div id="offline" class="banner" hidden>
+          The app can’t reach the server, so you’re seeing saved records. You
+          can still jot down notes here.
+        </div>
+        <section id="overview" class="page">
+          <div class="eyebrow">FARM OVERVIEW</div>
+          <h1>How’s the farm looking?</h1>
+          <p class="lead">Have a look at your farm and the weather.</p>
+          <div class="topline">
+            <h2 id="farm-title">My farm</h2>
+            <button class="secondary" data-go="farm">Edit farm</button>
+          </div>
+          <div id="farm-summary" class="farm-summary"></div>
+          <div class="stats">
+            <article>
+              <span id="rain-label">Total rainfall</span
+              ><strong id="rain-stat">—</strong
+              ><small id="rain-caption">All the rain over these dates</small>
+            </article>
+            <article>
+              <span id="temp-label">Average past temperature</span
+              ><strong id="temp-stat">—</strong
+              ><small id="temp-caption">For the past dates you picked</small>
+            </article>
+            <article>
+              <span>Soil pH</span><strong id="ph-stat">—</strong
+              ><small id="soil-status">No reading yet</small>
+            </article>
+          </div>
+          <p id="provenance" class="source"></p>
+          <div class="panel">
+            <h2>When did it rain?</h2>
+            <p id="rainfall-source" class="source"></p>
+            <div class="rainfall-stats">
+              <article>
+                <span id="dry-spell-label">Longest dry spell</span
+                ><strong id="dry-spell-value">—</strong
+                ><small id="dry-spell-caption"
+                  >Days in a row with less than 1 mm of rain</small
+                >
+              </article>
+              <article>
+                <span>Heaviest rain day</span
+                ><strong id="heaviest-rain-value">—</strong
+                ><small id="heaviest-rain-caption">No daily reading yet</small>
+              </article>
+            </div>
+            <div id="overview-rainfall-chart" class="plot"></div>
+            <details>
+              <summary>Daily rainfall amounts</summary>
+              <div id="overview-rainfall-readings"></div>
+            </details>
+          </div>
+          <div class="quick-actions">
+            <button data-go="forecasts">See the weather →</button>
+          </div>
+          <div class="section-heading">
+            <div>
+              <h2>Suggested actions</h2>
+              <p>A few things to check, based on your crop and the weather.</p>
+            </div>
+            <span class="pill">With sources</span>
+          </div>
+          <p class="source">
+            Start with a look around the field. Tap “Why this advice?” if you
+            want the details.
+          </p>
+          <div id="recommendations" class="cards"></div>
+          <div class="panel">
+            <h3>Field records</h3>
+            <p id="history-note"></p>
+            <button data-go="journal" class="secondary">Open journal</button>
+          </div>
+        </section>
+        <section id="forecasts" class="page" hidden>
+          <div class="eyebrow">FORECASTS</div>
+          <h1>Weather for your farm</h1>
+          <p class="lead">Rain coming? Here’s what the forecast says.</p>
+          <div class="panel">
+            <div class="view-switch" role="group" aria-label="Weather dates">
+              <button type="button" id="weather-next">Next 7 days</button
+              ><button type="button" id="weather-past" class="secondary">
+                Past dates
+              </button>
+            </div>
+            <div class="actions">
+              <button id="simple-weather-update">Update weather</button
+              ><button id="simple-weather-dates" class="secondary">
+                Choose past dates
+              </button>
+            </div>
+            <p class="source">
+              This is for your saved farm location. The source and last update
+              are below.
+            </p>
+          </div>
+          <div class="panel">
+            <h2>A look at the next 30 days</h2>
+            <p>
+              Useful for planning ahead. Check the short-range forecast again
+              before planting or watering.
+            </p>
+            <button id="month-update">Load 30-day outlook</button>
+            <div id="month-result"></div>
+          </div>
+          <div
+            id="simple-weather-summary"
+            class="weather-summary"
+            aria-live="polite"
+          ></div>
+          <div id="simple-weather-days" class="weather-days"></div>
+          <details class="panel">
+            <summary>Where this weather comes from</summary>
+            <div id="simple-weather-source"></div>
+          </details>
+          <div class="section-heading"><h2>What you can do</h2></div>
+          <p class="source">
+            Have a look at the field before changing your watering. If you’re
+            viewing past dates, treat this as practice.
+          </p>
+          <div id="forecast-actions" class="cards"></div>
+          <details class="panel" id="forecast-advanced">
+            <summary>Want to compare the forecasts?</summary>
+            <p class="source">
+              You can skip this bit. Trying a sample here won’t change the
+              weather cards for your farm.
+            </p>
+            <div class="panel">
+              <div class="form-grid">
+                <label
+                  >Dates to test<select id="model-mode">
+                    <option value="forward">
+                      7 days after the saved records
+                    </option>
+                    <option value="replay">
+                      Test the past dates you picked
+                    </option>
+                  </select></label
+                ><label
+                  >App forecast method<select id="model-method">
+                    <option value="auto">
+                      Let the app pick from earlier tests
+                    </option>
+                    <option value="ridge">Try ridge regression</option>
+                    <option value="baseline">Try the 14-day average</option>
+                  </select></label
+                ><label
+                  >Weather records to use<select id="model-dataset">
+                    <option value="current">Saved farm weather data</option>
+                    <option value="legazpi">Legazpi sample</option>
+                    <option value="naga">Naga sample</option>
+                  </select></label
+                >
+                <div>
+                  <p class="source">
+                    These samples are just for trying things out. Your farm
+                    details and records stay as they are.
+                  </p>
+                </div>
+              </div>
+              <div class="actions">
+                <button id="build-model">
+                  Build and check the app forecast</button
+                ><button id="load-forecast" class="secondary">
+                  Update live Open-Meteo</button
+                ><button id="load-comparison" class="secondary">
+                  Compare past forecasts
+                </button>
+              </div>
+              <p class="source">
+                Updating Open-Meteo shares your farm coordinates with them. The
+                app’s own forecast uses saved weather records; your notes stay
+                out of it.
+              </p>
+            </div>
+            <div id="model-status" class="inline-status">
+              Build an app forecast to see how it did on past weather.
+            </div>
+            <div id="model-actions" class="cards"></div>
+            <div class="comparison-heading">
+              <h2>Daily comparison</h2>
+              <label
+                >What to show<select id="forecast-variable">
+                  <option value="temp">Mean temperature (°C)</option>
+                  <option value="rain">Rainfall (mm/day)</option>
+                </select></label
+              >
+            </div>
+            <div class="panel">
+              <div id="comparison-chart" class="plot"></div>
+              <div class="legend">
+                <span class="internal-key">Internal forecast</span
+                ><span class="provider-key">Open-Meteo</span
+                ><span class="reference-key">Historical reference</span>
+              </div>
+              <div id="forecast-comparison"></div>
+            </div>
+            <div class="panel">
+              <h2>Historical test scores</h2>
+              <div id="replay-metrics"></div>
+            </div>
+            <div class="panel">
+              <h2>How the past tests went</h2>
+              <p>
+                The app tries both methods on earlier dates, then checks the
+                winner on later dates it hasn’t used to choose the method.
+              </p>
+              <div id="model-metrics"></div>
+              <details>
+                <summary>How the app picks a method</summary>
+                <p class="source">
+                  The app compares ridge regression with a simple 14-day
+                  average. Regression uses the last 14 days, time of year and
+                  how far ahead it’s predicting. It needs at least 365 usable
+                  days of non-synthetic data and must lower earlier validation
+                  MAE by 2%. The later test scores don’t choose the winner.
+                  Error ranges come from past errors at the same forecast lead;
+                  they aren’t a guaranteed confidence level. Rain is especially
+                  hard to predict from these inputs.
+                </p>
+              </details>
+            </div>
+            <div class="panel">
+              <h2>Saved forecast accuracy</h2>
+              <div id="archive-evaluation"></div>
+              <p class="source">
+                Scores need forecasts saved before the day happened, plus
+                weather records loaded afterwards. Two forecasts disagreeing
+                doesn’t tell us which was right. NASA POWER estimates weather
+                over a grid, rather than measuring it at your farm. Its daily
+                cutoffs can also differ from the forecast’s.
+              </p>
+            </div>
+            <div class="panel">
+              <h2>Open-Meteo daily detail</h2>
+              <div id="forecast-result"></div>
+              <p class="source">
+                Weather data by
+                <a
+                  href="https://open-meteo.com/"
+                  target="_blank"
+                  rel="noreferrer"
+                  >Open-Meteo</a
+                >
+                · CC BY 4.0. Updates are saved for three hours.
+              </p>
+            </div>
+          </details>
+        </section>
+        <section id="planting" class="page" hidden>
+          <h1>What could I plant next?</h1>
+          <p>
+            Let’s compare crops using your saved farm details and the latest
+            saved weather.
+          </p>
+          <div class="panel">
+            <label
+              >Does water stand in the field after rain?<select
+                id="suggest-drainage"
+              >
+                <option value="unknown">Not sure</option>
+                <option value="good">No, it drains well</option>
+                <option value="poor">Yes, water tends to stand</option>
+              </select></label
+            ><button id="suggest-crops">Find options for my farm</button>
+            <p>
+              Save any changes in My farm & soil first. These suggestions use
+              your current crop as the crop you’re rotating out of.
+            </p>
+          </div>
+          <div id="crop-suggestions"></div>
+          <details class="panel">
+            <summary>Make a calendar once you’ve picked a crop</summary>
+            <form id="crop-plan-form" class="panel">
+              <div class="form-grid">
+                <label
+                  >Last crop<select name="previous_crop">
+                    <option>rice</option>
+                    <option>corn</option>
+                    <option>mungbean</option>
+                    <option>sweet potato</option>
+                    <option>unknown</option>
+                  </select></label
+                ><label
+                  >Next crop<select name="crop">
+                    <option>mungbean</option>
+                    <option>rice</option>
+                    <option>corn</option>
+                    <option>sweet potato</option>
+                  </select></label
+                ><label
+                  >Possible planting date<input
+                    name="start"
+                    type="date"
+                    required /></label
+                ><label
+                  >Days to harvest for your variety<input
+                    name="duration"
+                    type="number"
+                    min="45"
+                    max="240"
+                    value="100"
+                    required /></label
+                ><label
+                  >Does the field drain well?<select name="drainage">
+                    <option value="unknown">Not sure</option>
+                    <option value="good">Yes</option>
+                    <option value="poor">Water tends to stand</option>
+                  </select></label
+                >
+              </div>
+              <p>
+                Check the seed label or ask your technician for the crop
+                duration. The number above is just a starting example.
+              </p>
+              <button>See my planting plan</button>
+            </form>
+            <div id="crop-plan-result" class="panel">
+              Pick a crop and date to get started.
+            </div>
+          </details>
+        </section>
+        <section id="climate" class="page" hidden>
+          <div class="eyebrow">WEATHER DATA</div>
+          <h1>Your weather records</h1>
+          <p class="lead">
+            Get past weather, add your own records or fix a missing day.
+          </p>
+          <details class="panel">
+            <summary>Replace the saved weather records</summary>
+            <p class="source">
+              To look at a month, use “Choose past dates” above. Downloading
+              here replaces the weather records used for training and clears
+              those selected dates.
+            </p>
+            <form id="climate-form" class="panel">
+              <h2>NASA POWER history</h2>
+              <div class="form-grid">
+                <label
+                  >Start date<input
+                    id="start-date"
+                    name="start"
+                    type="date"
+                    required /></label
+                ><label
+                  >End date<input id="end-date" name="end" type="date" required
+                /></label>
+              </div>
+              <div class="actions">
+                <button type="submit">Load historical weather</button
+                ><button id="recent-history" type="button" class="secondary">
+                  Use latest 2-year window</button
+                ><button id="demo" type="button" class="secondary">
+                  Try made-up example data
+                </button>
+              </div>
+              <p class="source">
+                You can load up to 1,096 days. The newest days may be missing.
+                NASA estimates weather over a grid; these aren’t farm sensor
+                readings. NASA and Open-Meteo can also use different daily
+                cutoffs.
+              </p>
+            </form>
+          </details>
+          <div class="panel">
+            <h2>Import daily weather records</h2>
+            <p>
+              CSV headers: <code>date,temp,rain</code>. Use YYYY-MM-DD, mean
+              temperature in °C, and daily rain in mm. Each date must be unique
+              and earlier than today.
+            </p>
+            <label
+              >CSV file<input
+                id="history-file"
+                type="file"
+                accept=".csv,text/csv" /></label
+            ><button id="import-history" class="secondary">
+              Import for saved farm coordinates
+            </button>
+            <p class="source">
+              Use records for this farm location only. They’ll be marked as
+              added by you and not checked. Importing replaces the current
+              weather records, but keeps your farm details and notes.
+            </p>
+          </div>
+          <div class="panel">
+            <h2>Edit daily weather records</h2>
+            <p>
+              Pick a date below or type one here. Your changes are marked as not
+              checked, and you can restore an older copy. You’ll need to build
+              the forecast again after an edit.
+            </p>
+            <form id="weather-record-form">
+              <div class="form-grid">
+                <label
+                  >Record date<input name="date" type="date" required /></label
+                ><label
+                  >Mean temperature (°C)<input
+                    name="temp"
+                    type="number"
+                    min="-60"
+                    max="65"
+                    step=".01"
+                    required /></label
+                ><label
+                  >Daily rain (mm)<input
+                    name="rain"
+                    type="number"
+                    min="0"
+                    max="3000"
+                    step=".01"
+                    required
+                /></label>
+              </div>
+              <div class="actions">
+                <button type="submit">Save / add record</button
+                ><button
+                  id="delete-weather-record"
+                  type="button"
+                  class="secondary"
+                >
+                  Remove this record
+                </button>
+              </div>
+            </form>
+            <details>
+              <summary>Restore a previous weather dataset</summary>
+              <div class="actions">
+                <select
+                  id="history-backup"
+                  aria-label="Previous weather dataset"
+                ></select
+                ><button id="restore-weather" class="secondary">
+                  Restore selected version
+                </button>
+              </div>
+            </details>
+          </div>
+          <div class="panel">
+            <h2>Daily history</h2>
+            <p id="chart-source" class="source"></p>
+            <div class="comparison-heading">
+              <label
+                >Variable<select id="history-variable">
+                  <option value="rain">Rainfall (mm)</option>
+                  <option value="temp">Mean temperature (°C)</option>
+                </select></label
+              >
+            </div>
+            <div id="history-chart" class="plot"></div>
+            <details>
+              <summary>View all daily readings</summary>
+              <div class="table-scroll">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Date</th>
+                      <th>Rain (mm)</th>
+                      <th>Mean temp (°C)</th>
+                      <th>Edit</th>
+                    </tr>
+                  </thead>
+                  <tbody id="climate-rows"></tbody>
+                </table>
+              </div>
+            </details>
+          </div>
+        </section>
+        <section id="farm" class="page" hidden>
+          <div class="eyebrow">YOUR FARM</div>
+          <h1>Set up your farm</h1>
+          <p class="lead">
+            Add your farm’s coordinates. We’ll look up the town and province,
+            then you can fill in the rest.
+          </p>
+          <form id="farm-form">
+            <input name="latitude" type="hidden" /><input
+              name="longitude"
+              type="hidden"
+            />
+            <div class="panel">
+              <span class="step-label">STEP 2</span>
+              <h2>Field details</h2>
+              <p class="source">
+                Fill in what you know. The map can find the place, but you’ll
+                need to add the area, crop and water source.
+              </p>
+              <div class="form-grid">
+                <label
+                  >Farm name<input
+                    name="name"
+                    required
+                    maxlength="120" /></label
+                ><label
+                  >Town / province — you can edit this<input
+                    name="municipality"
+                    required
+                    maxlength="120" /></label
+                ><label
+                  >Area (hectares)<input
+                    name="area"
+                    type="number"
+                    min=".01"
+                    max="10000"
+                    step="any"
+                    required /></label
+                ><label
+                  >Field setting<select name="terrain">
+                    <option value="lowland">Lowland</option>
+                    <option value="upland">Upland</option>
+                    <option value="coastal">Coastal</option>
+                  </select></label
+                ><label
+                  >Water source<select name="water">
+                    <option value="rainfed">Rainfed</option>
+                    <option value="irrigated">Irrigated</option>
+                  </select></label
+                ><label
+                  >Planned / current crop<select
+                    name="crop"
+                    class="crop-options"
+                  ></select></label
+                ><label
+                  >Previous crop<select
+                    name="previous_crop"
+                    class="crop-options"
+                  >
+                    <option value="unknown">Unknown</option>
+                  </select></label
+                ><label
+                  >Crop stage<select name="crop_stage">
+                    <option value="unknown">Unknown / not planted</option>
+                    <option value="preparation">Preparation</option>
+                    <option value="establishment">Newly planted</option>
+                    <option value="vegetative">
+                      Growing leaves / tillering
+                    </option>
+                    <option value="flowering">Flowering</option>
+                    <option value="maturity">Ripening / nearing harvest</option>
+                    <option value="harvest">Harvest</option>
+                  </select></label
+                ><label
+                  >Planting date<input name="planting_date" type="date"
+                /></label>
+              </div>
+            </div>
+            <div class="panel">
+              <span class="step-label">STEP 3 · OPTIONAL</span>
+              <h2>Add measured soil readings</h2>
+              <p class="source">
+                No reading? Just leave it blank. The map and weather can’t tell
+                us what’s in your soil.
+              </p>
+              <div class="form-grid">
+                <label
+                  >Sample date<input name="sample_date" type="date" /></label
+                ><label
+                  >Measurement method<select name="soil_method">
+                    <option value="unknown">Unknown / not measured</option>
+                    <option value="lab">Laboratory</option>
+                    <option value="sensor">Sensor</option>
+                    <option value="field kit">Field kit</option>
+                  </select></label
+                ><label
+                  >Current pH<input
+                    name="ph"
+                    type="number"
+                    min="0"
+                    max="14"
+                    step=".01"
+                    placeholder="Not measured" /></label
+                ><label
+                  >Previous pH (comparable sample)<input
+                    name="previous_ph"
+                    type="number"
+                    min="0"
+                    max="14"
+                    step=".01"
+                    placeholder="Optional" /></label
+                ><label
+                  >Nitrogen (mg/kg)<input
+                    name="nitrogen"
+                    type="number"
+                    min="0"
+                    max="100000"
+                    step="any"
+                    placeholder="Not measured" /></label
+                ><label
+                  >Phosphorus (mg/kg)<input
+                    name="phosphorus"
+                    type="number"
+                    min="0"
+                    max="100000"
+                    step="any"
+                    placeholder="Not measured" /></label
+                ><label
+                  >Potassium (mg/kg)<input
+                    name="potassium"
+                    type="number"
+                    min="0"
+                    max="100000"
+                    step="any"
+                    placeholder="Not measured"
+                /></label>
+              </div>
+              <label class="check"
+                ><input name="ash" type="checkbox" /> I’ve seen volcanic ash on
+                this field</label
+              >
+            </div>
+            <div class="save-bar">
+              <span
+                >We’ll check that the location is inside the saved Philippine
+                boundaries when you save.</span
+              ><button type="submit">Save my farm</button>
+            </div>
+          </form>
+        </section>
+        <section id="journal" class="page" hidden>
+          <div class="eyebrow">YOUR NOTES</div>
+          <h1>Farm journal</h1>
+          <p class="lead">
+            Jot down what you tried and how it went. You can save notes offline
+            too.
+          </p>
+          <form id="journal-form" class="panel">
+            <div class="form-grid">
+              <label
+                >Date<input
+                  name="date"
+                  id="journal-date"
+                  type="date"
+                  required /></label
+              ><label
+                >Crop<select name="crop" class="crop-options"></select></label
+              ><label
+                >What did you try?<input
+                  name="technique"
+                  required
+                  maxlength="120"
+                  placeholder="e.g. Added rice-straw mulch" /></label
+              ><label
+                >How did it go?<select name="outcome">
+                  <option value="unobserved">Too early to tell</option>
+                  <option value="better">Better than expected</option>
+                  <option value="same">As expected</option>
+                  <option value="worse">Worse than expected</option>
+                </select></label
+              ><label
+                >Harvest (kg, optional)<input
+                  name="yield_kg"
+                  type="number"
+                  min="0"
+                  max="10000000"
+                  step="any"
+              /></label>
+            </div>
+            <label
+              >Field notes<textarea
+                name="note"
+                required
+                maxlength="2000"
+                rows="3"
+                placeholder="What did you observe? Include dates, soil test methods or crop stress."
+              ></textarea></label
+            ><button type="submit">Save note</button>
+          </form>
+          <div class="section-heading">
+            <h2>Saved notes</h2>
+            <button id="sync" class="secondary">Sync saved notes</button>
+          </div>
+          <p id="queue-status" class="source"></p>
+          <div id="journal-list" class="cards"></div>
+          <button id="export" class="secondary">
+            Export my records (JSON)
+          </button>
+        </section>
+        <section id="learn" class="page" hidden>
+          <div class="eyebrow">METHODS & SOURCES</div>
+          <h1>How this works</h1>
+          <div class="panel">
+            <h2>Forecasts</h2>
+            <p>
+              The app uses your saved weather to estimate daily rain and average
+              temperature. It tries regression and a 14-day average on earlier
+              dates, then checks the chosen method on later dates. Local station
+              readings are only included if you import them. Open-Meteo uses
+              weather models with more atmospheric information.
+            </p>
+            <p>
+              Compare the same dates, location and weather measurement. We don’t
+              show percentage errors for temperature in °C. Rainfall MAPE leaves
+              out days below 1 mm, where percentages become misleading; MAE and
+              RMSE still use all usable days.
+            </p>
+          </div>
+          <div class="panel">
+            <h2>Data and field records</h2>
+            <p>
+              The Legazpi and Naga samples come from NASA POWER, with their
+              dates and download details kept. Made-up examples are labelled.
+              Your notes are saved for later study; they don’t feed the
+              forecasts or advice.
+            </p>
+            <p>
+              The location lookup uses saved geoBoundaries maps from 2020 to
+              find the town and province. It can’t check land ownership or
+              measure your field. This version keeps one farm on the local
+              server.
+            </p>
+          </div>
+          <div class="panel">
+            <h2>Agricultural references</h2>
+            <ul>
+              <li>
+                <a
+                  href="https://www.philrice.gov.ph/water-saving-practices-advised-as-el-nino-threat-looms/"
+                  target="_blank"
+                  rel="noreferrer"
+                  >DA-PhilRice: water management and critical rice stages</a
+                >
+              </li>
+              <li>
+                <a
+                  href="https://www.fao.org/4/x0490e/x0490e0e.htm"
+                  target="_blank"
+                  rel="noreferrer"
+                  >FAO 56: soil-water availability and water balance</a
+                >
+              </li>
+              <li>
+                <a
+                  href="https://www.pagasa.dost.gov.ph/ten-day-regional-agri-weather"
+                  target="_blank"
+                  rel="noreferrer"
+                  >PAGASA: regional agricultural weather</a
+                >
+              </li>
+              <li>
+                <a
+                  href="https://www.bswm.da.gov.ph/process/laboratory-services/"
+                  target="_blank"
+                  rel="noreferrer"
+                  >BSWM: soil testing and laboratory services</a
+                >
+              </li>
+              <li>
+                <a href="https://sarai.ph/" target="_blank" rel="noreferrer"
+                  >Project SARAi portal</a
+                >
+                · reference only; no data integration
+              </li>
+            </ul>
+            <p class="source">
+              These are things to check in the field. The app’s weather cutoffs
+              are starting points for review, not official warnings or locally
+              tested crop limits.
+            </p>
+          </div>
+        </section>
+        <footer>AgriForesight · Farm planning research prototype · v0.4</footer>
+      </main>
+    </div>
+    <button
+      id="chat-toggle"
+      class="assistant-launcher"
+      type="button"
+      aria-expanded="false"
+      aria-controls="assistant"
+    >
+      <img src="/static/assistant-mark.svg" alt="" width="28" height="28" />Ask
+      for help
+    </button>
+    <section
+      id="assistant"
+      class="assistant-panel"
+      role="dialog"
+      aria-modal="false"
+      aria-labelledby="assistant-title"
+      hidden
+    >
+      <div class="assistant-top">
+        <strong id="assistant-title">Farm assistant</strong
+        ><button
+          id="chat-new"
+          class="secondary"
+          type="button"
+          title="Clear this conversation and pending changes"
+        >
+          New chat</button
+        ><button
+          id="chat-close"
+          class="secondary"
+          type="button"
+          aria-label="Minimise farm assistant"
+        >
+          Close
+        </button>
+      </div>
+      <div class="assistant-scroll">
+        <div class="chat-heading">
+          <img
+            src="/static/assistant-mark.svg"
+            alt="AgriForesight placeholder sprout logo"
+            width="64"
+            height="64"
+          />
+          <div>
+            <span class="eyebrow">YOUR FARM ASSISTANT</span>
+            <h2>Need a hand?</h2>
+            <p>
+              Tell me what’s happening on your farm. We’ll take it from there.
+            </p>
+          </div>
+        </div>
+        <div class="chat-starters">
+          <button data-chat="Check weather">☀ Check the weather</button
+          ><button data-chat="Choose a crop">♧ Help me choose a crop</button
+          ><button data-chat="My farm">⌂ My farm details</button
+          ><button data-chat="Save a note">✎ Save a note</button>
+        </div>
+        <p class="source" id="chat-mode">
+          Chat uses recent messages and basic farm details with your configured
+          AI provider. Journal history stays out.
+        </p>
+        <div
+          id="chat-log"
+          role="log"
+          aria-live="polite"
+          aria-label="Conversation"
+        >
+          <article class="chat-bubble assistant">
+            Hi! I can help with your weather, crop choices and notes. You can
+            also say “my crop is rice” or “bagong tanim”.
+          </article>
+        </div>
+      </div>
+      <form id="chat-form" class="chat-composer">
+        <label for="chat-message">Your message</label>
+        <div>
+          <input
+            id="chat-message"
+            maxlength="2000"
+            placeholder="Type here…"
+            autocomplete="off"
+            required
+          /><button id="chat-send">Send</button>
+        </div>
+      </form>
+      <p class="source">
+        Farm changes and notes are shown for you to check before saving. This
+        chat does not operate irrigation equipment.
+      </p>
+    </section>
+  </body>
+</html>

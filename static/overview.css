@@ -1,109 +1,655 @@
 /* Figma palette and assets, scoped to Farm Overview. Other pages keep their styles. */
-@font-face{font-family:'JetBrains Mono';src:url('/static/overview-assets/JetBrainsMono-Regular.woff2') format('woff2');font-weight:400;font-display:swap}
-@font-face{font-family:'JetBrains Mono';src:url('/static/overview-assets/JetBrainsMono-Bold.woff2') format('woff2');font-weight:700 900;font-display:swap}
-.ov-nav-icon,.ov-brand,.ov-nav-caption{display:none}
+@font-face {
+  font-family: "JetBrains Mono";
+  src: url("/static/overview-assets/JetBrainsMono-Regular.woff2")
+    format("woff2");
+  font-weight: 400;
+  font-display: swap;
+}
+@font-face {
+  font-family: "JetBrains Mono";
+  src: url("/static/overview-assets/JetBrainsMono-Bold.woff2") format("woff2");
+  font-weight: 700 900;
+  font-display: swap;
+}
+.ov-nav-icon,
+.ov-brand,
+.ov-nav-caption {
+  display: none;
+}
 /* Keep the Figma navigation order on this screen only. */
-body[data-page="overview"] nav button[data-tab="overview"]{order:0}
-body[data-page="overview"] nav button[data-tab="farm"]{order:1}
-body[data-page="overview"] nav button[data-tab="forecasts"]{order:2}
-body[data-page="overview"] nav button[data-tab="planting"]{order:3}
-body[data-page="overview"] nav button[data-tab="journal"]{order:4}
-body[data-page="overview"] nav button[data-tab="learn"]{order:5}
-body[data-page="overview"]{background:#4e6428}
-body[data-page="overview"]>header{display:none}
-body[data-page="overview"] .layout{max-width:none;grid-template-columns:239px minmax(0,1fr);min-height:100vh;isolation:isolate;position:relative;overflow:hidden}
-body[data-page="overview"] .layout:before{content:'';position:fixed;left:50vw;top:50vh;width:100vh;height:100vw;transform:translate(-50%,-50%) rotate(89.92deg);z-index:-1;background:url('/static/overview-assets/imgImage1.png') center/cover;pointer-events:none}
-body[data-page="overview"] aside{background:#e3e4d6;border:0;border-radius:0 24px 24px 0;padding:27px 0;box-shadow:4px 4px 12px #0003}
-body[data-page="overview"] .ov-brand{display:flex;align-items:center;padding:0 17px;gap:4px;margin-bottom:90px;font:700 20px 'JetBrains Mono',monospace}body[data-page="overview"] .ov-brand img{width:51px;height:50px;object-fit:contain}
-body[data-page="overview"] .aside-note{display:none}body[data-page="overview"] nav{display:flex;flex-direction:column;gap:3px}
-body[data-page="overview"] nav button{display:flex;align-items:center;gap:12px;border-radius:0 50px 50px 0;padding:12px 18px 12px 28px;font-size:0;min-height:80px;color:#333}
-body[data-page="overview"] nav button.selected{background:#00000014;box-shadow:inset 0 1px 2px #0002}
-body[data-page="overview"] .ov-nav-icon{display:block;flex-shrink:0;box-sizing:content-box;padding:12px;border-radius:16px;background:#f4f4f4;box-shadow:2px 3px 5px #0003}
-body[data-page="overview"] .ov-nav-caption{display:inline;font:500 13px 'Segoe UI',sans-serif;text-align:left}
-body[data-page="overview"] nav button[data-tab="climate"]{display:none}
-body[data-page="overview"] main{padding:35px 34px;width:100%;max-width:none;min-width:0}
-body[data-page="overview"] .context-toolbar,body[data-page="overview"] #period-panel,body[data-page="overview"] footer{display:none}
-body[data-page="overview"].ov-dates-open #period-panel{display:block;background:#e3e4d6;margin:0 0 20px}
-#overview{font-family:'JetBrains Mono',Consolas,monospace;color:#262626;font-size:calc(14px * var(--overview-text-scale,1));position:relative}
-#overview button{font-family:inherit}#overview .ov-top{display:flex;align-items:center;gap:18px;margin:0 140px 14px 0;flex-wrap:wrap}
-#overview .ov-title{
-    display:flex;
-    align-items:center;
-    gap:16px;
-    min-height:56px;
-    min-width:0;
-    padding:8px 16px 8px 8px;
-    border:1px solid #d5c74580;
-    border-radius:23px;
-    background:linear-gradient(105deg,#b6a522e6,#5a5c29ed);
-    backdrop-filter:blur(12px);
-    color:#fff;
-    box-shadow:inset 0 1px 1px #ffffff30,0 2px 5px #0002;
+body[data-page="overview"] nav button[data-tab="overview"] {
+  order: 0;
 }
-#overview .ov-title h2{
-    margin:0;
-    font-size:2.15em;
-    font-weight:400;
-    line-height:1.2;
-    overflow-wrap:anywhere;
+body[data-page="overview"] nav button[data-tab="farm"] {
+  order: 1;
 }
-#overview .ov-title small{
-    display:flex;
-    flex-direction:column;
-    flex-shrink:0;
-    font-size:.85em;
-    line-height:1.35;
-    white-space:nowrap;
+body[data-page="overview"] nav button[data-tab="forecasts"] {
+  order: 2;
 }
-#overview .ov-edit{
-    display:inline-flex;
-    align-items:center;
-    justify-content:center;
-    gap:9px;
-    min-height:50px;
-    padding:6px 13px;
-    border:1px solid #e3e4d6;
-    border-radius:24px;
-    background:#333333;
-    color:#fff;
-    font-size:1.3em;
-    font-weight:700;
-    white-space:nowrap;
-    box-shadow:inset 0 1px 1px #fff6,0 3px 5px #0003;
+body[data-page="overview"] nav button[data-tab="planting"] {
+  order: 3;
 }
-#overview .ov-edit img{
-    width:32px;
-    height:32px;
-    object-fit:contain;
-    filter:brightness(0) invert(.75);
+body[data-page="overview"] nav button[data-tab="journal"] {
+  order: 4;
 }
-#overview .ov-zoom{display:flex;gap:5px;position:absolute;right:0;top:8px}#overview .ov-zoom button{background:#f4f4f4;border-radius:50%;padding:5px;width:38px;height:38px;min-height:38px;display:grid;place-items:center}
-#overview .ov-stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr)) minmax(180px,1.25fr);gap:16px;margin:0 0 20px}
-#overview .ov-stats article{position:relative;background:#e3e4d6;border:0;border-radius:16px;padding:14px 12px 14px 66px;display:block;min-width:0;box-shadow:inset .5px .5px 1px white,2px 3px 5px #0002}
-#overview .ov-stats img{position:absolute;left:18px;top:25px}#overview .ov-stats span{font-size:.8em;color:#35392d}#overview .ov-stats strong{display:block;font-size:1.3em;margin:7px 0;overflow-wrap:anywhere}#overview .ov-stats small{display:block;font-size:.7em;color:#4a5140;line-height:1.4}
-#overview .ov-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:30px 40px}
-#overview .ov-crops,#overview .ov-summary,#overview .ov-chart{background:#e3e4d6;border-radius:16px;padding:22px;min-width:0;box-shadow:inset .5px .5px 1px white,2px 3px 5px #0002}
-#overview .ov-crops{display:flex;align-items:center;gap:18px}#overview .ov-crops h2{font:500 25px 'Segoe UI';margin:0}#overview .ov-crop-items{display:grid;grid-template-columns:1fr 1fr;gap:11px;flex:1;min-width:0}
-#overview .ov-crop{position:relative;background:#ced0c2;border:0;border-radius:16px;color:#262626;padding:12px;min-height:71px;display:flex;align-items:center;gap:6px;font-size:.85em;font-weight:400;box-shadow:inset 0 1px 2px #0002;overflow:hidden;text-align:left}
-#overview .ov-crop img{width:75px;height:55px;object-fit:contain;mix-blend-mode:multiply}#overview #ov-current-crop{display:flex;flex-direction:column;align-items:flex-start;justify-content:center;gap:4px}#overview #ov-current-crop small{font-size:.85em}#overview #ov-current-crop strong{text-transform:capitalize}
-#overview .ov-add-symbol{border:1px dashed #777;border-radius:50%;width:36px;height:36px;display:grid;place-items:center;flex-shrink:0;font-size:25px}
-#overview .ov-summary{grid-column:1;grid-row:2;border-radius:30px}#overview .ov-summary h2{font-size:1.35em}#overview #farm-summary{background:none;border:0;padding:0;margin:0 0 18px}#overview #farm-summary .source{font-size:.85em}#overview .ov-shortcuts{display:flex;flex-wrap:wrap;gap:8px}#overview .ov-shortcuts button{border-radius:24px}
-#overview .ov-tip{grid-column:2;grid-row:1/span 2;position:relative;isolation:isolate;min-height:490px;overflow:hidden;border-radius:20px;background:linear-gradient(90deg,#24330ac9,#24330a22)}#overview .ov-tip>img:not(.ov-tip-backdrop){position:absolute;right:-15px;bottom:0;width:58%;height:100%;object-fit:fill;object-position:bottom;z-index:-1}#overview .ov-tip .ov-tip-backdrop{position:absolute;left:0;top:0;z-index:-2;width:auto;height:auto;opacity:.7}
-#overview .ov-tip-copy{padding:24px;max-width:56%;min-height:100%;display:flex;flex-direction:column;align-items:flex-start;color:white;text-shadow:0 1px 3px #0007}#overview .ov-tip h2{font-size:1.7em;font-weight:400;line-height:1.3}#overview .ov-tip p{font-size:.95em;line-height:1.7;flex:1}#overview .ov-tip button{border-radius:24px;margin-top:18px;min-width:147px;text-shadow:none}
-#overview .ov-chart{position:relative;padding-top:22px}#overview .ov-chart h2{font-size:1.65em;margin:0 0 12px}#overview .ov-chart-source{line-height:1.5;font-size:.8em;overflow-wrap:anywhere;min-height:36px}#overview .ov-chart .plot{min-height:180px}#overview .ov-chart .plot svg{width:100%;height:auto;max-height:230px}#overview .ov-chart-controls{display:flex;gap:8px;margin-top:10px}#overview .ov-chart-controls button{border-radius:24px;min-width:90px}
-#overview .ov-details{background:#e3e4d6;border-radius:18px;padding:20px;margin-top:24px}#overview .ov-details>h1,#overview .ov-details>.lead,#overview .ov-details>.eyebrow,#overview .ov-details>.topline{display:none}
-@media(max-width:1200px){body[data-page="overview"] .layout{grid-template-columns:190px minmax(0,1fr)}body[data-page="overview"] .ov-brand{font-size:15px;padding:0 12px}body[data-page="overview"] main{padding:24px}body[data-page="overview"] nav button{padding-left:15px}body[data-page="overview"] .ov-nav-icon{padding:8px}#overview .ov-grid{gap:20px}#overview .ov-crops{display:block}#overview .ov-crops h2{margin-bottom:12px}#overview .ov-stats{grid-template-columns:repeat(2,minmax(0,1fr))}#overview .ov-tip-copy{max-width:70%}#overview .ov-tip>img:not(.ov-tip-backdrop){opacity:.75}#overview .ov-crop img{width:50px}}
-@media(max-width:850px){body[data-page="overview"] .layout{grid-template-columns:minmax(0,1fr)}body[data-page="overview"] aside{padding:12px;border-radius:0;min-height:0}body[data-page="overview"] .ov-brand{margin:0 0 12px;font-size:20px}body[data-page="overview"] nav{flex-direction:row;overflow-x:auto;gap:4px}body[data-page="overview"] nav button{min-height:52px;flex-shrink:0;border-radius:16px;padding:10px}body[data-page="overview"] .ov-nav-icon{display:none}body[data-page="overview"] .ov-nav-caption{font-size:14px}#overview .ov-grid{grid-template-columns:minmax(0,1fr)}#overview .ov-tip{grid-column:1;grid-row:auto;min-height:360px}#overview .ov-summary{grid-row:auto}#overview .ov-tip-copy{max-width:62%;min-height:360px}#overview .ov-crop img{width:75px}#overview .ov-title{flex-wrap:wrap}#overview .ov-title h2{font-size:1.4em}}
-@media(max-width:480px){body[data-page="overview"] main{padding:18px 12px 90px}#overview .ov-top{margin-right:0;padding-top:50px}#overview .ov-zoom{top:0}#overview .ov-stats{gap:10px}#overview .ov-stats article{padding:12px}#overview .ov-stats img{display:none}#overview .ov-crops,#overview .ov-summary,#overview .ov-chart{padding:18px}#overview .ov-tip-copy{padding:18px;max-width:70%}#overview .ov-tip h2{font-size:1.35em}#overview .ov-crop img{width:50px}#overview .ov-crop{padding:10px;flex-wrap:wrap}}
+body[data-page="overview"] nav button[data-tab="learn"] {
+  order: 5;
+}
+body[data-page="overview"] {
+  background: #4e6428;
+}
+body[data-page="overview"] > header {
+  display: none;
+}
+body[data-page="overview"] .layout {
+  max-width: none;
+  grid-template-columns: 239px minmax(0, 1fr);
+  min-height: 100vh;
+  isolation: isolate;
+  position: relative;
+  overflow: hidden;
+}
+body[data-page="overview"] .layout:before {
+  content: "";
+  position: fixed;
+  left: 50vw;
+  top: 50vh;
+  width: 100vh;
+  height: 100vw;
+  transform: translate(-50%, -50%) rotate(89.92deg);
+  z-index: -1;
+  background: url("/static/overview-assets/imgImage1.png") center/cover;
+  pointer-events: none;
+}
+body[data-page="overview"] aside {
+  background: #e3e4d6;
+  border: 0;
+  border-radius: 0 24px 24px 0;
+  padding: 27px 0;
+  box-shadow: 4px 4px 12px #0003;
+}
+body[data-page="overview"] .ov-brand {
+  display: flex;
+  align-items: center;
+  padding: 0 17px;
+  gap: 4px;
+  margin-bottom: 90px;
+  font:
+    700 20px "JetBrains Mono",
+    monospace;
+}
+body[data-page="overview"] .ov-brand img {
+  width: 51px;
+  height: 50px;
+  object-fit: contain;
+}
+body[data-page="overview"] .aside-note {
+  display: none;
+}
+body[data-page="overview"] nav {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+body[data-page="overview"] nav button {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  border-radius: 0 50px 50px 0;
+  padding: 12px 18px 12px 28px;
+  font-size: 0;
+  min-height: 80px;
+  color: #333;
+}
+body[data-page="overview"] nav button.selected {
+  background: #00000014;
+  box-shadow: inset 0 1px 2px #0002;
+}
+body[data-page="overview"] .ov-nav-icon {
+  display: block;
+  flex-shrink: 0;
+  box-sizing: content-box;
+  padding: 12px;
+  border-radius: 16px;
+  background: #f4f4f4;
+  box-shadow: 2px 3px 5px #0003;
+}
+body[data-page="overview"] .ov-nav-caption {
+  display: inline;
+  font:
+    500 13px "Segoe UI",
+    sans-serif;
+  text-align: left;
+}
+body[data-page="overview"] nav button[data-tab="climate"] {
+  display: none;
+}
+body[data-page="overview"] main {
+  padding: 35px 34px;
+  width: 100%;
+  max-width: none;
+  min-width: 0;
+}
+body[data-page="overview"] .context-toolbar,
+body[data-page="overview"] #period-panel,
+body[data-page="overview"] footer {
+  display: none;
+}
+body[data-page="overview"].ov-dates-open #period-panel {
+  display: block;
+  background: #e3e4d6;
+  margin: 0 0 20px;
+}
+#overview {
+  font-family: "JetBrains Mono", Consolas, monospace;
+  color: #262626;
+  font-size: calc(14px * var(--overview-text-scale, 1));
+  position: relative;
+}
+#overview button {
+  font-family: inherit;
+}
+#overview .ov-top {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  margin: 0 140px 14px 0;
+  flex-wrap: wrap;
+}
+#overview .ov-title {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  min-height: 56px;
+  min-width: 0;
+  padding: 8px 16px 8px 8px;
+  border: 1px solid rgba(64, 64, 64, 0.5);
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(12.5px);
+  color: #fff;
+  box-shadow:
+    -20px 68px 20px transparent,
+    -13px 43px 18px #00000003,
+    -7px 24px 15px #0000000a,
+    -3px 11px 11px #00000012,
+    -1px 3px 6px #00000014;
+}
+#overview .ov-title h2 {
+  margin: 0;
+  font-size: 2.15em;
+  font-weight: 400;
+  line-height: 1.2;
+  overflow-wrap: anywhere;
+}
+#overview .ov-title small {
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+  font-size: 0.85em;
+  line-height: 1.35;
+  white-space: nowrap;
+}
+#overview .ov-edit {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  min-height: 50px;
+  padding: 6px 13px;
+  border: 1px solid #e3e4d6;
+  border-radius: 24px;
+  background: #333333;
+  color: #fff;
+  font-size: 1.3em;
+  font-weight: 700;
+  white-space: nowrap;
+  box-shadow:
+    inset 0 1px 1px #fff6,
+    0 3px 5px #0003;
+}
+#overview .ov-edit img {
+  width: 32px;
+  height: 32px;
+  object-fit: contain;
+  filter: brightness(0) invert(0.75);
+}
+#overview .ov-zoom {
+  display: flex;
+  gap: 5px;
+  position: absolute;
+  right: 0;
+  top: 8px;
+}
+#overview .ov-zoom button {
+  background: #f4f4f4;
+  border-radius: 50%;
+  padding: 5px;
+  width: 38px;
+  height: 38px;
+  min-height: 38px;
+  display: grid;
+  place-items: center;
+}
+#overview .ov-stats {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr)) minmax(180px, 1.25fr);
+  gap: 16px;
+  margin: 0 0 20px;
+}
+#overview .ov-stats article {
+  position: relative;
+  background: #e3e4d6;
+  border: 0;
+  border-radius: 16px;
+  padding: 14px 12px 14px 66px;
+  display: block;
+  min-width: 0;
+  box-shadow:
+    inset 0.5px 0.5px 1px white,
+    2px 3px 5px #0002;
+}
+#overview .ov-stats img {
+  position: absolute;
+  left: 18px;
+  top: 25px;
+}
+#overview .ov-stats span {
+  font-size: 0.8em;
+  color: #35392d;
+}
+#overview .ov-stats strong {
+  display: block;
+  font-size: 1.3em;
+  margin: 7px 0;
+  overflow-wrap: anywhere;
+}
+#overview .ov-stats small {
+  display: block;
+  font-size: 0.7em;
+  color: #4a5140;
+  line-height: 1.4;
+}
+#overview .ov-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 30px 40px;
+}
+#overview .ov-crops,
+#overview .ov-summary,
+#overview .ov-chart {
+  background: #e3e4d6;
+  border-radius: 16px;
+  padding: 22px;
+  min-width: 0;
+  box-shadow:
+    inset 0.5px 0.5px 1px white,
+    2px 3px 5px #0002;
+}
+#overview .ov-crops {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+}
+#overview .ov-crops h2 {
+  font: 500 25px "Segoe UI";
+  margin: 0;
+}
+#overview .ov-crop-items {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 11px;
+  flex: 1;
+  min-width: 0;
+}
+#overview .ov-crop {
+  position: relative;
+  background: #ced0c2;
+  border: 0;
+  border-radius: 16px;
+  color: #262626;
+  padding: 12px;
+  min-height: 71px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.85em;
+  font-weight: 400;
+  box-shadow: inset 0 1px 2px #0002;
+  overflow: hidden;
+  text-align: left;
+}
+#overview .ov-crop img {
+  width: 75px;
+  height: 55px;
+  object-fit: contain;
+  mix-blend-mode: multiply;
+}
+#overview #ov-current-crop {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 4px;
+}
+#overview #ov-current-crop small {
+  font-size: 0.85em;
+}
+#overview #ov-current-crop strong {
+  text-transform: capitalize;
+}
+#overview .ov-add-symbol {
+  border: 1px dashed #777;
+  border-radius: 50%;
+  width: 36px;
+  height: 36px;
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  font-size: 25px;
+}
+#overview .ov-summary {
+  grid-column: 1;
+  grid-row: 2;
+  border-radius: 30px;
+}
+#overview .ov-summary h2 {
+  font-size: 1.35em;
+}
+#overview #farm-summary {
+  background: none;
+  border: 0;
+  padding: 0;
+  margin: 0 0 18px;
+}
+#overview #farm-summary .source {
+  font-size: 0.85em;
+}
+#overview .ov-shortcuts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+#overview .ov-shortcuts button {
+  border-radius: 24px;
+}
+#overview .ov-tip {
+  grid-column: 2;
+  grid-row: 1 / span 2;
+  position: relative;
+  isolation: isolate;
+  min-height: 490px;
+  overflow: hidden;
+  border-radius: 20px;
+  background: linear-gradient(90deg, #24330ac9, #24330a22);
+}
+#overview .ov-tip > img:not(.ov-tip-backdrop) {
+  position: absolute;
+  right: -15px;
+  bottom: 0;
+  width: 58%;
+  height: 100%;
+  object-fit: fill;
+  object-position: bottom;
+  z-index: -1;
+}
+#overview .ov-tip .ov-tip-backdrop {
+  position: absolute;
+  left: 0;
+  top: 0;
+  z-index: -2;
+  width: auto;
+  height: auto;
+  opacity: 0.7;
+}
+#overview .ov-tip-copy {
+  padding: 24px;
+  max-width: 56%;
+  min-height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  color: white;
+  text-shadow: 0 1px 3px #0007;
+}
+#overview .ov-tip h2 {
+  font-size: 1.7em;
+  font-weight: 400;
+  line-height: 1.3;
+}
+#overview .ov-tip p {
+  font-size: 0.95em;
+  line-height: 1.7;
+  flex: 1;
+}
+#overview .ov-tip button {
+  border-radius: 24px;
+  margin-top: 18px;
+  min-width: 147px;
+  text-shadow: none;
+}
+#overview .ov-chart {
+  position: relative;
+  padding-top: 22px;
+}
+#overview .ov-chart h2 {
+  font-size: 1.65em;
+  margin: 0 0 12px;
+}
+#overview .ov-chart-source {
+  line-height: 1.5;
+  font-size: 0.8em;
+  overflow-wrap: anywhere;
+  min-height: 36px;
+}
+#overview .ov-chart .plot {
+  min-height: 180px;
+}
+#overview .ov-chart .plot svg {
+  width: 100%;
+  height: auto;
+  max-height: 230px;
+}
+#overview .ov-chart-controls {
+  display: flex;
+  gap: 8px;
+  margin-top: 10px;
+}
+#overview .ov-chart-controls button {
+  border-radius: 24px;
+  min-width: 90px;
+}
+#overview .ov-details {
+  background: #e3e4d6;
+  border-radius: 18px;
+  padding: 20px;
+  margin-top: 24px;
+}
+#overview .ov-details > h1,
+#overview .ov-details > .lead,
+#overview .ov-details > .eyebrow,
+#overview .ov-details > .topline {
+  display: none;
+}
+@media (max-width: 1200px) {
+  body[data-page="overview"] .layout {
+    grid-template-columns: 190px minmax(0, 1fr);
+  }
+  body[data-page="overview"] .ov-brand {
+    font-size: 15px;
+    padding: 0 12px;
+  }
+  body[data-page="overview"] main {
+    padding: 24px;
+  }
+  body[data-page="overview"] nav button {
+    padding-left: 15px;
+  }
+  body[data-page="overview"] .ov-nav-icon {
+    padding: 8px;
+  }
+  #overview .ov-grid {
+    gap: 20px;
+  }
+  #overview .ov-crops {
+    display: block;
+  }
+  #overview .ov-crops h2 {
+    margin-bottom: 12px;
+  }
+  #overview .ov-stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  #overview .ov-tip-copy {
+    max-width: 70%;
+  }
+  #overview .ov-tip > img:not(.ov-tip-backdrop) {
+    opacity: 0.75;
+  }
+  #overview .ov-crop img {
+    width: 50px;
+  }
+}
+@media (max-width: 850px) {
+  body[data-page="overview"] .layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  body[data-page="overview"] aside {
+    padding: 12px;
+    border-radius: 0;
+    min-height: 0;
+  }
+  body[data-page="overview"] .ov-brand {
+    margin: 0 0 12px;
+    font-size: 20px;
+  }
+  body[data-page="overview"] nav {
+    flex-direction: row;
+    overflow-x: auto;
+    gap: 4px;
+  }
+  body[data-page="overview"] nav button {
+    min-height: 52px;
+    flex-shrink: 0;
+    border-radius: 16px;
+    padding: 10px;
+  }
+  body[data-page="overview"] .ov-nav-icon {
+    display: none;
+  }
+  body[data-page="overview"] .ov-nav-caption {
+    font-size: 14px;
+  }
+  #overview .ov-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  #overview .ov-tip {
+    grid-column: 1;
+    grid-row: auto;
+    min-height: 360px;
+  }
+  #overview .ov-summary {
+    grid-row: auto;
+  }
+  #overview .ov-tip-copy {
+    max-width: 62%;
+    min-height: 360px;
+  }
+  #overview .ov-crop img {
+    width: 75px;
+  }
+  #overview .ov-title {
+    flex-wrap: wrap;
+  }
+  #overview .ov-title h2 {
+    font-size: 1.4em;
+  }
+}
+@media (max-width: 480px) {
+  body[data-page="overview"] main {
+    padding: 18px 12px 90px;
+  }
+  #overview .ov-top {
+    margin-right: 0;
+    padding-top: 50px;
+  }
+  #overview .ov-zoom {
+    top: 0;
+  }
+  #overview .ov-stats {
+    gap: 10px;
+  }
+  #overview .ov-stats article {
+    padding: 12px;
+  }
+  #overview .ov-stats img {
+    display: none;
+  }
+  #overview .ov-crops,
+  #overview .ov-summary,
+  #overview .ov-chart {
+    padding: 18px;
+  }
+  #overview .ov-tip-copy {
+    padding: 18px;
+    max-width: 70%;
+  }
+  #overview .ov-tip h2 {
+    font-size: 1.35em;
+  }
+  #overview .ov-crop img {
+    width: 50px;
+  }
+  #overview .ov-crop {
+    padding: 10px;
+    flex-wrap: wrap;
+  }
+}
 
 /* Farmer-facing chart summaries and readable axes. */
-#overview .ov-weather-summary{display:flex;flex-wrap:wrap;gap:6px 12px;align-items:baseline;margin:12px 0}
-#overview .ov-weather-summary strong{font-size:1.65em}
-#overview .ov-weather-summary span{font-size:.85em}
-#overview .ov-weather-summary p{flex-basis:100%;margin:4px 0;font-size:.9em;line-height:1.6}
-#overview .ov-chart-explanation{font-size:.8em;color:#49523e;line-height:1.6}
-#overview .ov-chart .plot svg{max-height:none;min-height:160px}
-#overview .ov-chart svg text{font-family:'Segoe UI',sans-serif;font-size:14px;fill:#37432c}
-#overview .ov-readings{margin:8px 0 16px}
-#overview .ov-readings summary{min-height:44px;display:flex;align-items:center;text-decoration:underline}
-#overview .ov-readings table{min-width:340px}
+#overview .ov-weather-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 12px;
+  align-items: baseline;
+  margin: 12px 0;
+}
+#overview .ov-weather-summary strong {
+  font-size: 1.65em;
+}
+#overview .ov-weather-summary span {
+  font-size: 0.85em;
+}
+#overview .ov-weather-summary p {
+  flex-basis: 100%;
+  margin: 4px 0;
+  font-size: 0.9em;
+  line-height: 1.6;
+}
+#overview .ov-chart-explanation {
+  font-size: 0.8em;
+  color: #49523e;
+  line-height: 1.6;
+}
+#overview .ov-chart .plot svg {
+  max-height: none;
+  min-height: 160px;
+}
+#overview .ov-chart svg text {
+  font-family: "Segoe UI", sans-serif;
+  font-size: 14px;
+  fill: #37432c;
+}
+#overview .ov-readings {
+  margin: 8px 0 16px;
+}
+#overview .ov-readings summary {
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  text-decoration: underline;
+}
+#overview .ov-readings table {
+  min-width: 340px;
+}

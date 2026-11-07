@@ -76,12 +76,13 @@ The current configuration uses one shared farm and temporary SQLite storage. Hos
 | Files | Purpose |
 | --- | --- |
 | `app.py`, `engine.py` | API routes, storage and validation |
-| `assistant_chat.py`, `assistant_actions.py` | AI providers, conversation and validated edits |
+| `assistant_chat.py`, `assistant_actions.py`, `assistant_context.py` | AI providers, validated edits and dated weather context |
 | `climate.py`, `forecast.py` | Weather downloads and provider data |
 | `modelling.py`, `evaluation.py` | NumPy ridge regression, baseline and forecast evaluation |
 | `advice.py`, `crop_planning.py` | Field checks, crop ranking and planting calendars |
 | `location.py`, `data/boundaries/` | Philippine coordinate lookup |
 | `static/overview.js`, `static/overview.css` | Dashboard text, charts and layout |
+| `static/myfarm.js`, `static/myfarm.css`, `static/sidebar.css` | Farm map, details and shared sidebar |
 | `static/app.js`, `static/chat.js`, `static/index.html`, `static/style.css` | Other screens and chat UI |
 | `static/sw.js` | Offline caching; change the cache version when updating cached assets |
 
@@ -90,10 +91,25 @@ The current configuration uses one shared farm and temporary SQLite storage. Hos
 node --check static/app.js
 node --check static/overview.js
 node --check static/chat.js
+node --check static/myfarm.js
 ```
+
+To keep edits readable, use `uvx ruff@0.11.13 format .` for Python and `npx --yes prettier@3.6.2 --write "static/*.js" "static/*.css" static/index.html` for the frontend. These are development tools; Render needs no extra packages. `uvx ruff@0.11.13 check .` checks Python for common mistakes and unused imports.
+
+Screens register with `registerPageView` in `static/app.js`. Only the active screen redraws its charts and records. My Farm owns coordinate previews and GPS; the old hidden location screen and retired water simulator have been removed. `time_utils.py` handles Philippine dates and cache freshness.
 
 ## Data and credits
 
 Weather comes from NASA POWER and Open-Meteo, including ERA5 history and ECMWF EC46 outlooks. Sample, historical and predicted values carry different meanings. The 30-day outlook supports broad planning and has substantial daily uncertainty. Soil readings come from user input.
 
 Philippine boundaries are a simplified 2020 snapshot from geoBoundaries, with original sources NAMRIA, PSA and OCHA Philippines. Distributed by William & Mary geoLab and contributors under [CC BY 3.0 IGO](https://creativecommons.org/licenses/by/3.0/igo/). Preserve this attribution when redistributing. Release details and source URLs are in `data/boundaries/metadata.json`. Coordinate matches provide approximate administrative context.
+
+My Farm uses locally bundled Leaflet 1.9.4 with Esri satellite imagery and an OpenStreetMap street layer. Tiles need internet access. Use **Choose a point on the map**, check the location preview, then choose **Save new coordinates** or **Cancel**. The point marks a location; farm boundaries and sensor measurements must be supplied separately. Leaflet attribution and license are in `static/vendor/leaflet/LICENSE`.
+
+The My Farm Saved Weather card shows the selected historical rainfall and temperature, with source and dates. At the Legazpi example coordinates (13.1391, 123.7438), **Load sourced Legazpi weather** loads the bundled NASA POWER snapshot and selects its latest available month. Other farm coordinates need a weather download for that point. Weather downloads provide no measured soil chemistry or farm area.
+
+The My Farm sensor log can show Open-Meteo model estimates for current air temperature, relative humidity and surface soil moisture (0–1 cm). Soil moisture is displayed as volume percent, converted from m³/m³. Estimates carry the provider time, cache for 30 minutes and retain the original timestamp if an update fails. Open More Details to hide the map while editing.
+
+More Details contains compact crop and soil-sample fields. Use Input for typed coordinates or GPS. Location previews stay on the map and are saved separately from other unfinished form edits.
+
+The location tile checks [KartaView](https://kartaview.org/doc/photos) for a public street photo within 500 m of the saved point. Tap a photo to enlarge it without leaving the app. The distance and capture date help distinguish a nearby road from your actual field. Where coverage is missing or the service fails, the tile opens the farm map. Photos need internet access; metadata caches for a day (six hours for no coverage, five minutes for outages). Images are credited to KartaView contributors under [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/). This works on Render without extra keys or paid services.

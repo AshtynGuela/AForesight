@@ -1,0 +1,239 @@
+/* Shared navigation for Farm Overview and My Farm. Expansion overlays the page. */
+body:is([data-page="overview"], [data-page="farm"]) .layout {
+  grid-template-columns: 96px minmax(0, 1fr);
+}
+body:is([data-page="overview"], [data-page="farm"]) aside {
+  position: sticky;
+  top: 0;
+  align-self: start;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  width: 96px;
+  height: 100dvh;
+  min-height: 0;
+  padding: 20px 0 12px;
+  border: 0;
+  border-radius: 0 24px 24px 0;
+  background: #e3e4d6;
+  box-shadow: 3px 0 8px #0003;
+  z-index: 90;
+  overflow: hidden;
+  transition: width 0.2s ease;
+}
+body:is([data-page="overview"], [data-page="farm"])
+  aside:is(:hover, :focus-within) {
+  width: 260px;
+}
+body:is([data-page="overview"], [data-page="farm"]) .ov-brand,
+body:is([data-page="overview"], [data-page="farm"]) .aside-note {
+  display: none;
+}
+body:is([data-page="overview"], [data-page="farm"]) .mf-brand {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: calc(100% - 12px);
+  max-width: none;
+  height: 100px;
+  margin: 0 6px 35px;
+  overflow: hidden;
+  mix-blend-mode: multiply;
+}
+body:is([data-page="overview"], [data-page="farm"]) .mf-brand img {
+  display: block;
+  position: static;
+  width: 100%;
+  height: auto;
+  max-width: none;
+  flex-shrink: 0;
+  transform: scale(1.28);
+}
+body:is([data-page="overview"], [data-page="farm"]) nav {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  overflow-x: hidden;
+  overflow-y: auto;
+  flex-shrink: 1;
+  width: 100%;
+}
+body:is([data-page="overview"], [data-page="farm"]) nav button {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 14px;
+  flex-shrink: 0;
+  min-height: 76px;
+  padding: 10px 20px;
+  font-size: 0;
+  border-radius: 0 44px 44px 0;
+  color: #333;
+  white-space: nowrap;
+}
+body:is([data-page="overview"], [data-page="farm"]) nav button.selected {
+  background: #00000014;
+  box-shadow: inset 0 1px 2px #0002;
+}
+body:is([data-page="overview"], [data-page="farm"]) .ov-nav-icon {
+  display: block;
+  flex-shrink: 0;
+  box-sizing: content-box;
+  padding: 11px;
+  background: #f4f4f4;
+  border-radius: 16px;
+  box-shadow: 2px 3px 5px #0003;
+}
+body:is([data-page="overview"], [data-page="farm"]) .ov-nav-caption {
+  display: block;
+  opacity: 0;
+  visibility: hidden;
+  white-space: normal;
+  min-width: 136px;
+  max-width: 136px;
+  font:
+    500 13px/1.45 "Segoe UI",
+    sans-serif;
+  text-align: left;
+  transition: opacity 0.15s ease;
+}
+body:is([data-page="overview"], [data-page="farm"])
+  aside:is(:hover, :focus-within)
+  .ov-nav-caption {
+  opacity: 1;
+  visibility: visible;
+}
+body:is([data-page="overview"], [data-page="farm"]) nav [data-tab="overview"] {
+  order: 0;
+}
+body:is([data-page="overview"], [data-page="farm"]) nav [data-tab="farm"] {
+  order: 1;
+}
+body:is([data-page="overview"], [data-page="farm"]) nav [data-tab="forecasts"] {
+  order: 2;
+}
+body:is([data-page="overview"], [data-page="farm"]) nav [data-tab="planting"] {
+  order: 3;
+}
+body:is([data-page="overview"], [data-page="farm"]) nav [data-tab="journal"] {
+  order: 4;
+}
+body:is([data-page="overview"], [data-page="farm"]) nav [data-tab="learn"] {
+  order: 5;
+}
+body:is([data-page="overview"], [data-page="farm"]) nav [data-tab="climate"] {
+  display: none;
+}
+body:is([data-page="overview"], [data-page="farm"]) .mf-support {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  flex-shrink: 0;
+  margin: auto 0 0;
+  padding: 14px 30px;
+  background: transparent;
+  color: #333;
+  min-height: 56px;
+}
+body:is([data-page="overview"], [data-page="farm"]) .mf-support img {
+  flex-shrink: 0;
+}
+body:is([data-page="overview"], [data-page="farm"]) aside:focus-within {
+  overflow: visible;
+}
+@media (prefers-reduced-motion: reduce) {
+  body:is([data-page="overview"], [data-page="farm"]) aside,
+  body:is([data-page="overview"], [data-page="farm"]) .ov-nav-caption {
+    transition: none;
+  }
+}
+@media (max-width: 550px) {
+  body:is([data-page="overview"], [data-page="farm"]) .layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  body:is([data-page="overview"], [data-page="farm"]) aside,
+  body:is([data-page="overview"], [data-page="farm"])
+    aside:is(:hover, :focus-within) {
+    position: static;
+    width: 100%;
+    height: auto;
+    flex-direction: row;
+    padding: 8px;
+    border-radius: 0;
+    overflow: hidden;
+  }
+  body:is([data-page="overview"], [data-page="farm"]) .mf-brand {
+    display: none;
+  }
+  body:is([data-page="overview"], [data-page="farm"]) nav {
+    flex-direction: row;
+    overflow-x: auto;
+    overflow-y: hidden;
+    gap: 4px;
+  }
+  body:is([data-page="overview"], [data-page="farm"]) nav button {
+    min-height: 48px;
+    min-width: 48px;
+    padding: 6px;
+    border-radius: 14px;
+    gap: 0;
+  }
+  body:is([data-page="overview"], [data-page="farm"]) .ov-nav-icon {
+    padding: 6px;
+    border-radius: 10px;
+    box-shadow: none;
+  }
+  body:is([data-page="overview"], [data-page="farm"]) .ov-nav-caption {
+    display: none;
+  }
+  body:is([data-page="overview"], [data-page="farm"]) .mf-support {
+    margin: 0;
+    padding: 8px;
+    min-height: 48px;
+  }
+}
+@media (hover: none) and (min-width: 551px) {
+  body:is([data-page="overview"], [data-page="farm"]) .layout {
+    grid-template-columns: 260px minmax(0, 1fr);
+  }
+  body:is([data-page="overview"], [data-page="farm"]) aside {
+    width: 260px;
+  }
+  body:is([data-page="overview"], [data-page="farm"]) .ov-nav-caption {
+    opacity: 1;
+    visibility: visible;
+  }
+}
+
+/* Use the standalone mark until navigation expands. Scaling trims only white margins. */
+body:is([data-page="overview"], [data-page="farm"]) .mf-brand .mf-logo-compact {
+  transform: scale(1.9);
+}
+body:is([data-page="overview"], [data-page="farm"])
+  .mf-brand
+  .mf-logo-expanded {
+  display: none;
+}
+body:is([data-page="overview"], [data-page="farm"])
+  aside:is(:hover, :focus-within)
+  .mf-logo-compact {
+  display: none;
+}
+body:is([data-page="overview"], [data-page="farm"])
+  aside:is(:hover, :focus-within)
+  .mf-logo-expanded {
+  display: block;
+}
+@media (hover: none) and (min-width: 551px) {
+  body:is([data-page="overview"], [data-page="farm"])
+    .mf-brand
+    .mf-logo-compact {
+    display: none;
+  }
+  body:is([data-page="overview"], [data-page="farm"])
+    .mf-brand
+    .mf-logo-expanded {
+    display: block;
+  }
+}

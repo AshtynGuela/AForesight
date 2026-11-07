@@ -1,0 +1,6 @@
+.venv/
+instance/
+data/
+static/vendor/
+static/myfarm-assets/
+static/overview-assets/
