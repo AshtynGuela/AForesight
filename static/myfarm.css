@@ -1044,3 +1044,21 @@ body[data-page="farm"] #offline:not([hidden]) {
     grid-template-columns: 1fr;
   }
 }
+
+#farm .mf-check-reading,
+#farm .mf-check-source {
+  display: block;
+  font-size: 11px;
+  line-height: 1.5;
+  margin-top: 3px;
+}
+#farm .mf-check-source {
+  color: #586653;
+}
+#farm .mf-assessment-message {
+  font-size: 12px;
+  line-height: 1.5;
+}
+#farm .mf-assessment-message:empty {
+  display: none;
+}

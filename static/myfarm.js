@@ -215,17 +215,26 @@
   const performance = el("section", undefined, "mf-performance");
   performance.append(
     el("h2", "Farm Performance"),
-    el("small", "Your farm condition check"),
+    el("small", "Farm health · weather outlook"),
   );
   const empty = el("div", undefined, "mf-performance-empty");
   const conditionRing = el("span", "—", "mf-empty-ring mf-condition-ring");
   conditionRing.setAttribute("role", "img");
-  const performanceTitle = el("strong", "Not enough data");
+  const performanceTitle = el("strong", "Checking farm conditions");
   const performanceAction = el(
     "p",
-    "Add farm readings to get a condition check.",
+    "Getting the sources for your saved field.",
   );
-  const coverageLabel = el("small", "Checks with usable data");
+  const coverageLabel = el("small", "Next seven days");
+  const assessmentUpdate = button(
+    "Update sources",
+    () => updateAssessment(true),
+    "secondary",
+  );
+  const assessmentMessage = el("p", "", "mf-assessment-message");
+  assessmentMessage.setAttribute("role", "status");
+  let assessmentLoading = false;
+  const assessmentAttempts = new Map();
   empty.append(
     conditionRing,
     coverageLabel,
@@ -252,7 +261,8 @@
     assessmentDraft,
     conditionChecks,
     conditionExplanation,
-    button("Open field journal", () => tab("journal"), "secondary"),
+    assessmentMessage,
+    assessmentUpdate,
   );
 
   const weatherCard = el(
@@ -956,44 +966,106 @@
         `${colors[item.status]} ${index * 120}deg ${index * 120 + 115}deg, #f4f4f4 ${index * 120 + 115}deg ${(index + 1) * 120}deg`,
     );
     conditionRing.style.background = `conic-gradient(${segments.join(",")})`;
-    conditionRing.textContent = result.ready + "/3";
+    conditionRing.textContent = result.badge;
     conditionRing.setAttribute(
       "aria-label",
-      result.ready +
-        " of 3 checks have usable data. " +
-        result.title +
-        ". This is not a health score.",
+      result.title + ". Heat, rain and water outlook from weather sources.",
     );
-    coverageLabel.textContent = result.ready + " of 3 checks have usable data";
+    coverageLabel.textContent =
+      result.period + " · " + result.ready + "/3 checks complete";
     performanceTitle.textContent = result.title;
     performanceAction.textContent = result.action;
     performance.dataset.status = result.status;
     conditionChecks.replaceChildren();
     explanationBody.replaceChildren(
       el("p", result.note),
-      el("p", "The ring counts available checks, not how healthy the farm is."),
+      el(
+        "p",
+        "Green: no screening flag. Amber: check your field. Grey: missing or outdated data. All three checks must be complete before the circle says Good.",
+      ),
     );
     for (const item of result.checks) {
       const row = el("div", undefined, "mf-condition-check");
       row.dataset.status = item.status;
-      row.append(el("strong", item.label), el("span", item.title));
+      const summary = el("span", item.title);
+      summary.append(el("small", item.value, "mf-check-reading"));
+      summary.append(
+        el(
+          "small",
+          [...new Set(item.sources.map((source) => source.title))].join(
+            " · ",
+          ) || "Waiting for source",
+          "mf-check-source",
+        ),
+      );
+      row.append(el("strong", item.label), summary);
       conditionChecks.append(row);
       const section = el("section");
       section.append(
         el("strong", item.label),
         el("p", item.detail),
-        creditLink(item.source.title, item.source.url),
+        el("p", item.action),
       );
-      if (item.guide)
-        section.append(creditLink(item.guide.title, item.guide.url));
+      for (const source of item.sources) {
+        section.append(creditLink(source.title, source.url));
+        if (source.time)
+          section.append(
+            el(
+              "small",
+              "Source time: " +
+                new Date(source.time).toLocaleString("en-PH", {
+                  timeZone: "Asia/Manila",
+                }) +
+                " · Philippine time",
+            ),
+          );
+      }
+      if (!item.sources.length)
+        section.append(el("p", "No recent source for this field."));
       explanationBody.append(section);
     }
     explanationBody.append(
       el(
         "p",
-        "Prototype review settings: soil samples up to 180 days old; forecasts up to 48 hours old; current estimates up to 6 hours old. Flags use ≥35 °C, ≥50 mm/day, or 3 consecutive forecast days below 1 mm, or rain below reference ET₀ on rainfed farms. These are screening rules, not official warnings or fertilizer rates.",
+        "Prototype screening rules: heat ≥35 °C; rain ≥50 mm/day; 3 dry days below 1 mm/day; or seven-day rain below reference ET₀ for a rainfed field. These are review triggers, not validated crop-health thresholds or official warnings. Forecasts expire after 48 hours, current estimates after 6 hours. Reference ET₀ is not your crop’s irrigation requirement.",
       ),
     );
+  }
+  async function updateAssessment(manual = false) {
+    if (!state || assessmentLoading) return;
+    const point = state.farm.latitude + ":" + state.farm.longitude;
+    if (!manual && Date.now() - (assessmentAttempts.get(point) || 0) < 180000)
+      return;
+    assessmentAttempts.set(point, Date.now());
+    assessmentLoading = true;
+    assessmentUpdate.disabled = true;
+    assessmentUpdate.textContent = "Updating…";
+    assessmentMessage.textContent =
+      "Getting the forecast for your saved field…";
+    try {
+      const result = await api("/api/forecast", {});
+      if (point !== state.farm.latitude + ":" + state.farm.longitude) return;
+      state.forecast = result.forecast;
+      try {
+        save(CACHE, state);
+      } catch {
+        /* Still usable without device storage. */
+      }
+      assessmentMessage.textContent =
+        "Sources updated. Open Why this check? for the readings and dates.";
+    } catch (error) {
+      if (point === state.farm.latitude + ":" + state.farm.longitude)
+        assessmentMessage.textContent =
+          "Forecast could not update. " + error.message;
+    } finally {
+      assessmentLoading = false;
+      assessmentUpdate.disabled = false;
+      assessmentUpdate.textContent = "Update sources";
+      renderFarmAssessment();
+      if (point !== state.farm.latitude + ":" + state.farm.longitude)
+        renderMyFarm();
+    }
+    if (manual) await loadConditions();
   }
   function renderMyFarm() {
     if (!state) return;
@@ -1072,6 +1144,11 @@
         loadConditions();
     }
 
+    if (
+      document.body.dataset.page === "farm" &&
+      assessFarm(state).needsForecast
+    )
+      updateAssessment();
     ensureMap();
     if (map && !pendingPoint && currentPointKey !== pointKey) {
       currentPointKey = pointKey;

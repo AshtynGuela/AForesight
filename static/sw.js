@@ -1,4 +1,4 @@
-const CACHE = "agriforesight-shell-v39-farm-condition-check";
+const CACHE = "agriforesight-shell-v40-sourced-farm-health";
 const FILES = [
   "/static/farm-assessment.js",
   "/static/conditions.js",

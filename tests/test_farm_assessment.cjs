@@ -2,11 +2,10 @@ const { test } = require("node:test");
 const assert = require("node:assert/strict");
 const vm = require("node:vm");
 const fs = require("node:fs");
-const path = require("node:path");
 const context = vm.createContext({});
 vm.runInContext(
   fs.readFileSync(
-    path.join(__dirname, "../static/farm-assessment.js"),
+    require("node:path").join(__dirname, "../static/farm-assessment.js"),
     "utf8",
   ) + ";globalThis.assess=assessFarm;",
   context,
@@ -17,127 +16,125 @@ const farm = {
   longitude: 123.7438,
   crop: "rice",
   water: "rainfed",
-  crop_stage: "vegetative",
-  ph: null,
-};
-const completeFarm = {
-  ...farm,
-  ph: 6.2,
-  ph_medium: "water",
-  sample_date: "2026-11-01",
-  soil_method: "lab",
-  nitrogen_rating: "medium",
-  phosphorus_rating: "medium",
-  potassium_rating: "medium",
 };
 const forecast = {
   ...farm,
-  source: "Provider test fixture",
+  source: "Open-Meteo",
   retrieved_at: new Date(now).toISOString(),
   days: Array.from({ length: 7 }, (_, i) => ({
     date: `2026-11-${String(7 + i).padStart(2, "0")}`,
     rain: 8,
     high: 30,
-    temp: 28,
     et0: 4,
   })),
 };
-test("missing readings are unknown, never a zero health score", () => {
-  const result = context.assess({ farm }, now);
-  assert.equal(result.status, "unknown");
-  assert.equal(result.ready, 0);
-  assert.equal(result.score, undefined);
-});
-test("complete recent report plus unflagged forecast can clear the three checks", () => {
-  const result = context.assess({ farm: completeFarm, forecast }, now);
-  assert.equal(result.ready, 3);
-  assert.equal(result.status, "okay");
-});
-test("crop pH ranges change the assessment and numeric NPK is not interpreted automatically", () => {
+const assess = (changes = {}) =>
+  context.assess({ farm, forecast, ...changes }, now);
+test("provider weather can clear all checks without manual soil data", () => {
+  const r = assess();
+  assert.equal(r.badge, "Good");
+  assert.equal(r.ready, 3);
+  assert.equal(r.checks[0].sources[0].title, "Open-Meteo");
+  assert.equal(r.score, undefined);
   assert.equal(
-    context.assess(
-      { farm: { ...completeFarm, crop: "mungbean" }, forecast },
-      now,
-    ).checks[0].status,
-    "attention",
+    r.checks.some((c) => c.id === "soil"),
+    false,
   );
-  const result = context.assess(
-    {
-      farm: { ...completeFarm, nitrogen_rating: "unknown", nitrogen: 50 },
-      forecast,
-    },
-    now,
-  );
-  assert.equal(result.checks[0].available, false);
-  assert.match(result.checks[0].detail, /ask the lab/i);
 });
-test("old or relocated samples cannot pass the soil check", () => {
-  for (const change of [
-    { sample_date: "2025-01-01" },
-    { soil_sample_point: { latitude: 14, longitude: 121 } },
-    { ph_medium: "cacl2" },
-  ]) {
-    assert.equal(
-      context.assess({ farm: { ...completeFarm, ...change }, forecast }, now)
-        .checks[0].available,
-      false,
-    );
-  }
+test("missing, old, sample, future and wrong-coordinate forecasts cannot clear checks", () => {
+  for (const f of [
+    null,
+    { ...forecast, demo: true },
+    { ...forecast, retrieved_at: "2025-01-01" },
+    { ...forecast, retrieved_at: "2027-01-01" },
+    { ...forecast, longitude: 124 },
+  ])
+    assert.equal(assess({ forecast: f }).status, "unknown");
 });
-test("surface moisture alone cannot determine root water stress", () => {
-  const result = context.assess(
-    {
-      farm,
-      current_conditions: {
-        ...farm,
-        valid_at: new Date(now).toISOString(),
-        soil_moisture: 0.01,
+test("heat and heavy rain independently trigger Watch and relevant action", () => {
+  for (const change of [{ high: 36 }, { rain: 60 }]) {
+    const r = assess({
+      forecast: {
+        ...forecast,
+        days: forecast.days.map((d) => ({ ...d, ...change })),
       },
-    },
-    now,
-  );
-  assert.equal(result.checks[1].status, "unknown");
-  assert.match(
-    result.checks[1].detail,
-    /does not tell us whether the roots need water/,
-  );
+    });
+    assert.equal(r.badge, "Watch");
+    assert.equal(r.status, "attention");
+    assert.ok(r.action.length);
+  }
 });
-test("stale, sample and wrong-point forecasts do not trigger present-day alerts", () => {
-  const risky = {
-    ...forecast,
-    days: forecast.days.map((day) => ({ ...day, rain: 100, high: 40 })),
-  };
-  for (const change of [
-    { demo: true },
-    { latitude: 14 },
-    { retrieved_at: "2025-01-01T00:00:00Z" },
+test("dry spells and ET0 gap trigger a water check, not irrigation doses", () => {
+  for (const change of [{ rain: 0 }, { rain: 2, et0: 5 }]) {
+    const r = assess({
+      forecast: {
+        ...forecast,
+        days: forecast.days.map((d) => ({ ...d, ...change })),
+      },
+    });
+    assert.equal(r.checks[2].status, "attention");
+    assert.match(r.checks[2].action, /roots/);
+  }
+});
+test("partial, duplicate or missing ET0 data never produce Good", () => {
+  for (const days of [
+    forecast.days.slice(1),
+    forecast.days.map((d) => ({ ...d, et0: null })),
+    Array(7).fill(forecast.days[0]),
   ]) {
-    assert.equal(
-      context.assess({ farm, forecast: { ...risky, ...change } }, now).checks[2]
-        .status,
-      "unknown",
-    );
+    assert.notEqual(assess({ forecast: { ...forecast, days } }).badge, "Good");
   }
   assert.equal(
-    context.assess({ farm, forecast: risky }, now).checks[2].status,
-    "attention",
+    assess({
+      forecast: {
+        ...forecast,
+        days: forecast.days.map((d) => ({ ...d, high: null })),
+      },
+    }).status,
+    "unknown",
   );
 });
-test("dry sequences and reference ET0 flag water checks without prescribing irrigation amounts", () => {
-  const dry = {
-    ...forecast,
-    days: forecast.days.map((day) => ({ ...day, rain: 0 })),
+test("current heat can flag a field while moisture alone cannot declare it healthy", () => {
+  const current_conditions = {
+    ...farm,
+    source: "Open-Meteo weather model",
+    valid_at: new Date(now).toISOString(),
+    temperature: 36,
+    soil_moisture: 0.2,
   };
+  const r = assess({ forecast: null, current_conditions });
+  assert.equal(r.badge, "Watch");
+  assert.match(r.checks[2].value, /20.0/);
+  assert.equal(r.checks[2].status, "unknown");
   assert.equal(
-    context.assess({ farm, forecast: dry }, now).checks[1].status,
-    "attention",
+    assess({
+      forecast: null,
+      current_conditions: { ...current_conditions, latitude: 14 },
+    }).status,
+    "unknown",
   );
-  const deficit = {
+});
+test("manual soil values do not alter the weather outlook; irrigated fields avoid ET0-only alarms", () => {
+  assert.equal(
+    assess({ farm: { ...farm, ph: 2, nitrogen_rating: "low" } }).badge,
+    "Good",
+  );
+  const f = {
     ...forecast,
-    days: forecast.days.map((day) => ({ ...day, rain: 2, et0: 5 })),
+    days: forecast.days.map((d) => ({ ...d, rain: 2, et0: 5 })),
   };
   assert.equal(
-    context.assess({ farm, forecast: deficit }, now).checks[1].status,
-    "attention",
+    assess({ farm: { ...farm, water: "irrigated" }, forecast: f }).checks[2]
+      .status,
+    "okay",
+  );
+  assert.equal(
+    assess({
+      forecast: {
+        ...forecast,
+        days: forecast.days.map((d) => ({ ...d, rain: NaN })),
+      },
+    }).checks[1].available,
+    false,
   );
 });
