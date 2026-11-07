@@ -275,14 +275,14 @@
   const weatherSource = el("p", undefined, "source");
   weatherCard.append(weatherValues, weatherSource);
   const sampleButton = button(
-    "Load sourced Legazpi weather",
+    "Update sourced history",
     async () => {
       await run(sampleButton, async () => {
         if (farmDirty) throw new Error("Save your farm details first.");
-        await api("/api/climate", { mode: "sample", dataset: "legazpi" });
+        await api("/api/history/sourced", {});
         await refresh();
         notice(
-          "NASA POWER history loaded for the Legazpi example coordinates.",
+          "Sourced history saved for your farm coordinates.",
         );
       });
     },
@@ -1052,7 +1052,8 @@
         /* Still usable without device storage. */
       }
       assessmentMessage.textContent =
-        "Sources updated. Open Why this check? for the readings and dates.";
+        result.warning ||
+        "Forecast saved here. Open Why this check? for the readings and dates.";
     } catch (error) {
       if (point === state.farm.latitude + ":" + state.farm.longitude)
         assessmentMessage.textContent =
@@ -1099,8 +1100,7 @@
       (days.length
         ? " · " + days[0].date + " to " + days.at(-1).date
         : " · No readings for the selected dates");
-    sampleButton.hidden =
-      Number(farm.latitude) !== 13.1391 || Number(farm.longitude) !== 123.7438;
+    sampleButton.hidden = false;
 
     draftStatus.textContent = farmDirty
       ? "Changes waiting to be saved"

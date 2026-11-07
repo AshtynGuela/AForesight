@@ -64,7 +64,8 @@ class ReliabilityTests(unittest.TestCase):
 
     def test_sample_label(self):
         self.assertEqual(
-            self.client.get("/api/state").json["data_labels"]["history"], "Sample data"
+            self.client.get("/api/state").json["data_labels"]["history"],
+            "No sourced history",
         )
 
     def test_compact_date_rejected(self):
@@ -74,7 +75,11 @@ class ReliabilityTests(unittest.TestCase):
         self.assertEqual(response.status_code, 400)
 
     def test_old_history_cache_refreshes(self):
-        payload = demo(DEFAULT_FARM["latitude"], DEFAULT_FARM["longitude"])
+        payload = {
+            **demo(DEFAULT_FARM["latitude"], DEFAULT_FARM["longitude"]),
+            "demo": False,
+            "kind": "gridded_reference",
+        }
         request = {"start": "2025-03-01", "end": "2025-03-30"}
         with patch("app.fetch_power", return_value=payload) as fetch:
             self.assertEqual(
@@ -185,13 +190,13 @@ class ReliabilityTests(unittest.TestCase):
                 },
             ).json
         self.assertTrue(contexts[0]["weather"]["outlook"]["available"])
-        self.assertTrue(contexts[0]["weather"]["history"]["sample"])
+        self.assertFalse(contexts[0]["weather"]["history"]["sample"])
         self.assertFalse(contexts[0]["weather"]["forecast"]["available"])
         self.assertEqual(response["days"], payload["days"])
         self.assertIn("needs an update", response["text"])
         self.assertIn("Test outlook", response["text"])
 
-    def test_guided_history_reads_saved_sample_records(self):
+    def test_guided_history_does_not_invent_missing_records(self):
         with patch("assistant_chat.ai_enabled", return_value=False):
             response = self.client.post(
                 "/api/chat",
@@ -200,22 +205,19 @@ class ReliabilityTests(unittest.TestCase):
                     "message": "Show historical weather",
                 },
             ).json
-        self.assertEqual(len(response["days"]), 30)
-        self.assertIn("sample values", response["text"])
+        self.assertEqual(response["days"], [])
+        self.assertNotIn("sample values", response["text"])
         self.assertEqual(response["open_page"], "climate")
 
-    def test_sourced_example_keeps_farm_and_uses_real_snapshot(self):
-        before = self.client.get("/api/state").json["farm"]
+    def test_sample_switch_cannot_replace_saved_field_data(self):
+        before = self.client.get("/api/state").json
         result = self.client.post(
             "/api/climate", json={"mode": "sample", "dataset": "legazpi"}
         )
-        self.assertEqual(result.status_code, 200)
-        self.assertFalse(result.json["climate"]["demo"])
-        self.assertIn("power.larc.nasa.gov", result.json["climate"]["source_url"])
+        self.assertEqual(result.status_code, 400)
         after = self.client.get("/api/state").json
-        self.assertEqual(after["farm"], before)
-        self.assertEqual(after["analysis_period"]["start"], "2026-10-01")
-        self.assertIsNone(after["farm"]["ph"])
+        self.assertEqual(after["farm"], before["farm"])
+        self.assertEqual(after["climate"], before["climate"])
 
     def test_sourced_example_rejects_different_coordinates(self):
         before = self.client.get("/api/state").json["climate"]

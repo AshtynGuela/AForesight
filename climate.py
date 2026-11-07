@@ -6,6 +6,29 @@ import requests
 NASA_URL = "https://power.larc.nasa.gov/api/temporal/daily/point"
 
 
+def empty_history(latitude, longitude):
+    """Missing observations are empty, never synthetic weather."""
+    return {
+        "source": "No sourced history downloaded",
+        "kind": "unavailable",
+        "demo": False,
+        "latitude": latitude,
+        "longitude": longitude,
+        "retrieved_at": None,
+        "days": [],
+        "missing_days": 0,
+    }
+
+
+def sourced(climate):
+    return bool(
+        climate
+        and not climate.get("demo")
+        and climate.get("kind") == "gridded_reference"
+        and climate.get("days")
+    )
+
+
 def demo(latitude, longitude):
     start = date(2025, 3, 1)
     return {
@@ -65,6 +88,7 @@ def fetch_power(latitude, longitude, start, end):
         raise ValueError("NASA returned no usable observations for this period.")
     return {
         "source": "NASA POWER — gridded historical data",
+        "source_url": "https://power.larc.nasa.gov/docs/services/api/temporal/daily/",
         "kind": "gridded_reference",
         "demo": False,
         "latitude": latitude,
@@ -123,6 +147,7 @@ def fetch_archive(latitude, longitude, start, end):
         raise ValueError("Archive returned no usable daily records.")
     return {
         "source": "ERA5 reanalysis via Open-Meteo archive",
+        "source_url": "https://open-meteo.com/en/docs/historical-weather-api",
         "kind": "gridded_reference",
         "demo": False,
         "latitude": latitude,

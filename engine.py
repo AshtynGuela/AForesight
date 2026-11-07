@@ -123,16 +123,14 @@ def recommend(farm, climate, journals=(), forecast=None):
     from advice import suggested_actions
 
     days = climate["days"]
-    if not days:
-        raise ValueError("No usable climate observations.")
-    rain = sum(d["rain"] for d in days) / len(days) * 30
-    temp = sum(d["temp"] for d in days) / len(days)
+    rain = sum(d["rain"] for d in days) / len(days) * 30 if days else None
+    temp = sum(d["temp"] for d in days) / len(days) if days else None
     relevant = [j for j in journals if j["crop"] == farm["crop"]]
     return {
-        "rain": round(rain, 1),
-        "temp": round(temp, 1),
-        "baseline_rain": round(rain, 1),
-        "baseline_temp": round(temp, 1),
+        "rain": round(rain, 1) if rain is not None else None,
+        "temp": round(temp, 1) if temp is not None else None,
+        "baseline_rain": round(rain, 1) if rain is not None else None,
+        "baseline_temp": round(temp, 1) if temp is not None else None,
         "risk": "Check field conditions",
         "actions": suggested_actions(farm, forecast),
         "history_count": len(relevant),

@@ -94,6 +94,73 @@ $("#journal-date").value = isoDay();
 $("#start-date").value = isoDay(-731);
 $("#end-date").value = isoDay(-1);
 async function api(path, data) {
+  if (
+    ["/api/crop-suggestions", "/api/crop-plan"].includes(path) &&
+    state?.farm
+  ) {
+    const cacheKey =
+      "agriforesight-crop-result-v1:" +
+      JSON.stringify({
+        path,
+        data,
+        farm: state.farm,
+        forecast: state.forecast?.retrieved_at,
+      });
+    const cached = read(cacheKey, null);
+    const savedResult = () => ({
+      ...cached.result,
+      warning:
+        "Saved result from " +
+        new Date(cached.saved_at).toLocaleString("en-PH", {
+          timeZone: "Asia/Manila",
+        }) +
+        ". Recheck the weather before planting.",
+    });
+    if (!navigator.onLine) {
+      if (cached) return savedResult();
+      throw new Error(
+        "No saved crop result for these details yet. Connect once to compare crops or create a calendar.",
+      );
+    }
+    try {
+      const result = await apiRequest(path, data);
+      try {
+        save(cacheKey, { result, saved_at: new Date().toISOString() });
+      } catch {
+        notice(
+          "Crop result is visible, but device storage could not save it.",
+          true,
+        );
+      }
+      return result;
+    } catch (error) {
+      if (cached && (!error.status || error.status >= 500))
+        return savedResult();
+      throw error;
+    }
+  }
+  if (path === "/api/forecast" && state?.farm) {
+    const farm = { ...state.farm };
+    state.forecast = farmForecasts.preferCached(farm, state.forecast);
+    const result = await farmForecasts.load(
+      farm,
+      () => apiRequest(path, data),
+      navigator.onLine,
+    );
+    if (samePoint(farm, state.farm)) {
+      state.forecast = result.forecast;
+      state.forecast_status = result.warning || "";
+      try {
+        save(CACHE, state);
+      } catch {
+        /* The store reports storage failures. */
+      }
+    }
+    return result;
+  }
+  return apiRequest(path, data);
+}
+async function apiRequest(path, data) {
   const r = await fetch(path, {
     method: data === undefined ? "GET" : "POST",
     headers: data === undefined ? {} : { "Content-Type": "application/json" },
@@ -438,6 +505,8 @@ function renderRainfall(history, future, period) {
 }
 function provenance() {
   const c = state.climate;
+  if (!c.days.length)
+    return "No sourced weather downloaded for this field yet.";
   const p = state.analysis_period;
   return (
     (p
@@ -537,6 +606,7 @@ function renderHistory() {
       f.scrollIntoView({ block: "center", behavior: "smooth" });
     };
     cell.append(button);
+    cell.hidden = true;
     tr.append(cell);
     rows.append(tr);
   });
@@ -558,6 +628,15 @@ function renderHistory() {
 $("#history-variable").onchange = renderHistory;
 async function refresh() {
   state = await api("/api/state");
+  try {
+    state.journals = farmJournal.merge(state.journals);
+  } catch {
+    notice("Device storage is full. Export your notes for a backup.", true);
+  }
+  state.climate = farmHistory.preferCached(state.farm, state.climate);
+  if (state.internal?.demo) state.internal = null;
+  if (state.analysis?.internal?.demo) state.analysis = null;
+  state.forecast = farmForecasts.preferCached(state.farm, state.forecast);
   const preferredConditions = farmConditions.preferCached(
     state.farm,
     state.current_conditions,
@@ -573,6 +652,27 @@ async function refresh() {
   }
   connected(true);
   render();
+  if (!state.climate.days.length && navigator.onLine) ensureSourcedHistory();
+}
+let historyLoading = false;
+const historyAttempts = new Map();
+async function ensureSourcedHistory(manual = false) {
+  if (!state || historyLoading || !navigator.onLine) return;
+  const point = state.farm.latitude + ":" + state.farm.longitude;
+  if (!manual && Date.now() - (historyAttempts.get(point) || 0) < 300000)
+    return;
+  historyAttempts.set(point, Date.now());
+  historyLoading = true;
+  notice("Downloading sourced weather history for your saved field…");
+  try {
+    await api("/api/history/sourced", {});
+    await refresh();
+    notice("Sourced history saved here for offline reading.");
+  } catch (error) {
+    notice(error.message + " No sample values are substituted.", true);
+  } finally {
+    historyLoading = false;
+  }
 }
 $("#farm-form").addEventListener("input", (event) => {
   if (event.target.name) farmDirty = true;
@@ -951,9 +1051,12 @@ function renderProvider() {
 async function updateFarmWeather(button) {
   await run(button, async () => {
     notice("Getting your farm’s weather…");
-    await api("/api/forecast", {});
-    await refresh();
-    notice("Weather updated. Have a quick look at the dates.");
+    const result = await api("/api/forecast", {});
+    render();
+    notice(
+      result.warning ||
+        "Weather saved on this device. Farm Performance uses the same forecast.",
+    );
   });
 }
 $("#load-forecast").onclick = (e) => updateFarmWeather(e.target);
@@ -975,14 +1078,45 @@ function renderSimpleForecast() {
       month: "2-digit",
       day: "2-digit",
     }).format(new Date());
-  const forecast = state.forecast;
+  const forecast = farmForecasts.preferCached(state.farm, state.forecast);
+  if (forecast) state.forecast = forecast;
+  const upcoming = (forecast?.days || [])
+    .filter((d) => d.date >= today)
+    .slice(0, 7);
   const days = past
     ? visibleHistory()
-    : (forecast?.days || []).filter((d) => d.date >= today).slice(0, 7);
+    : upcoming.length
+      ? upcoming
+      : forecast?.days || [];
   const summary = $("#simple-weather-summary"),
     box = $("#simple-weather-days");
   summary.replaceChildren();
   box.replaceChildren();
+  if (!past) {
+    summary.append(
+      el(
+        "p",
+        !navigator.onLine
+          ? "Offline · saved forecast"
+          : forecast
+            ? "Saved forecast for this field"
+            : "No forecast downloaded yet",
+        "context-note",
+      ),
+    );
+    if (state.forecast_status)
+      summary.append(el("p", state.forecast_status, "context-note"));
+    if (forecast && !upcoming.length)
+      summary.append(
+        el(
+          "p",
+          "These forecast dates have passed. They are kept for reference, not today's weather.",
+          "context-note",
+        ),
+      );
+    const assessment = assessFarm(state);
+    summary.append(el("strong", assessment.title), el("p", assessment.action));
+  }
   $("#weather-next").className = past ? "secondary" : "";
   $("#weather-past").className = past ? "" : "secondary";
   $("#simple-weather-update").hidden = past;
@@ -992,7 +1126,11 @@ function renderSimpleForecast() {
       "h2",
       past
         ? "Past weather — just for trying things out"
-        : "Next 7 days at your farm",
+        : upcoming.length
+          ? "Next 7 days at your farm"
+          : forecast
+            ? "Saved forecast · original dates"
+            : "Next 7 days at your farm",
     ),
   );
   if (past && state.analysis_period) {
@@ -1085,16 +1223,31 @@ function renderSimpleForecast() {
   );
   actions(
     "#forecast-actions",
-    past ? state.recommendation.actions : state.weather_actions || [],
+    past
+      ? state.recommendation.actions
+      : assessFarm(state).checks.map((check) => ({
+          title: check.title,
+          action: check.action,
+          why: check.detail,
+          priority:
+            check.status === "attention"
+              ? "Check your field"
+              : check.status === "okay"
+                ? "Keep checking"
+                : "Data needed",
+          context: "Uses the same saved forecast as Farm Performance.",
+          basis: assessFarm(state).period,
+          reference: check.sources[0],
+        })),
   );
 }
 $("#weather-next").onclick = () => {
   weatherView = "next";
-  renderSimpleForecast();
+  renderActivePage();
 };
 $("#weather-past").onclick = () => {
   weatherView = "past";
-  renderSimpleForecast();
+  renderActivePage();
 };
 $("#simple-weather-dates").onclick = () => {
   $("#period-panel").open = true;
@@ -1108,12 +1261,96 @@ function renderJournal() {
   const list = $("#journal-list");
   list.replaceChildren();
   const ids = new Set(saved.map((j) => j.id));
-  for (const j of [
+  const notes = [
     ...pending
       .filter((j) => !ids.has(j.id))
       .map((j) => ({ ...j, pending: true })),
-    ...saved,
-  ]) {
+    ...saved.map((j) => ({
+      ...j,
+      pending: pending.some((p) => p.id === j.id),
+    })),
+  ];
+  if (document.querySelector("#journal.workspace-panel")) {
+    const waiting = notes.filter((j) => j.pending).length;
+    $("#queue-status").textContent =
+      `${notes.length} saved ${notes.length === 1 ? "entry" : "entries"}` +
+      (waiting ? ` · ${waiting} waiting to sync` : "");
+    $("#sync").hidden = !waiting;
+    const table = makeTable(
+      ["", "Date", "Crop", "Field", "What did you try?", "Result"],
+      notes.map((j) => [
+        "",
+        j.date,
+        j.crop,
+        j.field || j.farm_context?.name || "—",
+        j.technique,
+        j.pending
+          ? "Waiting to sync"
+          : {
+              unobserved: "Too early to tell",
+              better: "Better",
+              same: "As expected",
+              worse: "Worse",
+            }[j.outcome] || j.outcome,
+      ]),
+    );
+    const grid = table.querySelector("table");
+    grid.className = "wj-notes-table";
+    grid.setAttribute("aria-label", "Saved field notes");
+    const columns = el("colgroup");
+    for (const width of [59, 61, 62, 61, 148, 59]) {
+      const col = el("col");
+      col.style.width = (width / 450) * 100 + "%";
+      columns.append(col);
+    }
+    grid.prepend(columns);
+    grid.querySelector("th").setAttribute("aria-label", "Field photo");
+    const rows = table.querySelectorAll("tbody tr");
+    notes.forEach((j, i) => {
+      const cells = rows[i].children;
+      const dateParts = /^(\d{4})-(\d{2})-(\d{2})$/.exec(j.date);
+      if (dateParts) {
+        const time = el(
+          "time",
+          `${dateParts[2]}-${dateParts[3]}-${dateParts[1]}`,
+        );
+        time.dateTime = j.date;
+        cells[1].replaceChildren(time);
+      }
+      cells[2].textContent = j.crop[0].toUpperCase() + j.crop.slice(1);
+      const badge = el("span", undefined, "wj-result");
+      badge.dataset.outcome = j.pending ? "pending" : j.outcome;
+      if (!j.pending && ["better", "same", "worse"].includes(j.outcome)) {
+        const icon = el("img");
+        icon.src =
+          "/static/journal-assets/" +
+          (j.outcome === "better" ? "result-good.svg" : "result-fair.svg");
+        icon.alt = "";
+        badge.append(icon);
+      }
+      badge.append(el("span", cells[5].textContent));
+      cells[5].replaceChildren(badge);
+      if (j.photo_id)
+        farmJournal
+          .photo(j.photo_id)
+          .then((file) => {
+            if (!file) return;
+            const img = el("img");
+            img.className = "wj-note-photo";
+            const url = URL.createObjectURL(file);
+            img.src = url;
+            img.alt = "Your field photo";
+            img.onload = () => URL.revokeObjectURL(url);
+            rows[i].firstChild.append(img);
+          })
+          .catch(() => {});
+    });
+    list.append(table);
+    if (!notes.length)
+      list.append(el("p", "No saved entries yet.", "wj-saved-empty"));
+    return;
+  }
+  for (const j of notes) {
     const c = el("article");
     c.append(
       el("span", j.pending ? "Pending sync" : j.date, "pill"),
@@ -1149,9 +1386,15 @@ async function sync() {
     syncing = false;
   }
 }
-$("#journal-form").onsubmit = (e) => {
+$("#journal-form").onsubmit = async (e) => {
   e.preventDefault();
   const f = e.currentTarget;
+  if (f.dataset.saving) return;
+  f.dataset.saving = "yes";
+  const submit =
+    document.querySelector('button[form="journal-form"][type="submit"]') ||
+    f.querySelector('button[type="submit"]');
+  if (submit) submit.disabled = true;
   const farm = state?.farm;
   const item = {
     ...Object.fromEntries(new FormData(f)),
@@ -1168,17 +1411,42 @@ $("#journal-form").onsubmit = (e) => {
         }
       : null,
   };
+  item.note = item.note || item.technique;
   try {
+    const photo = $("#journal-photo")?.files[0];
+    if (photo) {
+      if (
+        photo.size > 2 * 1024 * 1024 ||
+        !["image/jpeg", "image/png", "image/webp"].includes(photo.type)
+      )
+        throw new Error("Choose a JPG, PNG or WebP photo up to 2 MB.");
+      await farmJournal.photo(item.id, photo);
+      item.photo_id = item.id;
+    }
     save(QUEUE, [...read(QUEUE, []), item]);
+    let archiveWarning = "";
+    try {
+      farmJournal.merge([item]);
+    } catch {
+      archiveWarning =
+        " The sync queue is saved, but the extra local archive is full. Export a backup.";
+    }
+    localStorage.removeItem("agriforesight-journal-draft-v1");
     f.elements.note.value = "";
+    f.elements.technique.value = "";
+    if ($("#journal-photo")) $("#journal-photo").value = "";
     renderJournal();
-    notice("Note saved here.");
+    notice("Note saved here." + archiveWarning);
     if (navigator.onLine) sync();
-  } catch {
+  } catch (error) {
     notice(
-      "This browser can’t save the note. Copy it somewhere before you leave.",
+      error.message ||
+        "This browser can’t save the note. Copy it somewhere before you leave.",
       true,
     );
+  } finally {
+    delete f.dataset.saving;
+    if (submit) submit.disabled = false;
   }
 };
 $("#sync").onclick = sync;
@@ -1298,7 +1566,10 @@ $("#restore-weather").onclick = (e) =>
     await refresh();
     notice("Older weather records restored.");
   });
-window.addEventListener("offline", () => connected(false));
+window.addEventListener("offline", () => {
+  connected(false);
+  if (state) renderActivePage();
+});
 window.addEventListener("online", sync);
 async function start() {
   try {
@@ -1307,8 +1578,21 @@ async function start() {
   } catch {
     state = read(CACHE, null);
     connected(false);
-    if (state) render();
-    else
+    if (state) {
+      state.climate = farmHistory.preferCached(state.farm, state.climate);
+      if (state.internal?.demo) state.internal = null;
+      if (state.analysis?.internal?.demo) state.analysis = null;
+      if (!state.climate.days.length)
+        state.recommendation = {
+          ...state.recommendation,
+          rain: null,
+          temp: null,
+          baseline_rain: null,
+          baseline_temp: null,
+        };
+      state.forecast = farmForecasts.preferCached(state.farm, state.forecast);
+      render();
+    } else
       notice("Start the app’s server, then refresh to see your records.", true);
   }
   loadBackups();
@@ -1396,11 +1680,13 @@ $("#crop-plan-form").onsubmit = (e) => {
       "/api/crop-plan",
       Object.fromEntries(new FormData($("#crop-plan-form"))),
     );
+    save("agriforesight-crop-plan-v1", r);
     const box = $("#crop-plan-result");
     box.replaceChildren(
       el("h2", r.previous_crop + " → " + r.crop),
       el("p", r.note),
     );
+    if (r.warning) box.prepend(el("p", r.warning, "context-note"));
     r.checks.forEach((t) => box.append(el("p", "• " + t)));
     box.append(
       makeTable(
@@ -1433,6 +1719,7 @@ $("#suggest-crops").onclick = (e) =>
         `Using: ${r.inputs.previous_crop} → ${r.inputs.current_crop} → next crop · ${r.inputs.terrain} · ${r.inputs.water}. ${r.inputs.forecast_days_used} usable forecast days.`,
       ),
     );
+    if (r.warning) box.prepend(el("p", r.warning, "context-note"));
     for (const option of r.options) {
       const card = el("article", undefined, "panel");
       card.append(el("h2", option.crop), el("span", option.status, "pill"));
@@ -1452,6 +1739,7 @@ $("#suggest-crops").onclick = (e) =>
         f.elements.crop.value = option.crop;
         f.elements.previous_crop.value = r.inputs.current_crop;
         f.elements.drainage.value = r.inputs.drainage;
+        f.closest("details").hidden = false;
         f.closest("details").open = true;
         f.scrollIntoView({ behavior: "smooth" });
       };

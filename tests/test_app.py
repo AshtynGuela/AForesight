@@ -19,11 +19,12 @@ class PrototypeTests(unittest.TestCase):
     def tearDown(self):
         self.temp.cleanup()
 
-    def test_initial_state_is_explicit_demo(self):
+    def test_initial_state_has_no_invented_weather(self):
         state = self.client.get("/api/state").get_json()
-        self.assertTrue(state["climate"]["demo"])
+        self.assertFalse(state["climate"]["demo"])
+        self.assertEqual(state["climate"]["days"], [])
+        self.assertIsNone(state["recommendation"]["rain"])
         self.assertIsNone(state["farm"]["ph"])
-        self.assertIn("Synthetic", state["recommendation"]["source"])
 
     def test_profile_persists_across_app_restart(self):
         farm = {**DEFAULT_FARM, "ph": 5.2, "previous_ph": 6.2, "ash": True}
@@ -107,13 +108,16 @@ class PrototypeTests(unittest.TestCase):
                 ).status_code,
                 502,
             )
-        self.assertTrue(self.client.get("/api/state").get_json()["climate"]["demo"])
+        self.assertEqual(
+            self.client.get("/api/state").get_json()["climate"]["days"], []
+        )
 
     def test_nasa_cache_and_coordinate_change(self):
         climate = {
             **demo(DEFAULT_FARM["latitude"], DEFAULT_FARM["longitude"]),
             "demo": False,
             "source": "test NASA fixture",
+            "kind": "gridded_reference",
         }
         with patch("app.fetch_power", return_value=climate) as fetch:
             for _ in range(2):
@@ -132,7 +136,9 @@ class PrototypeTests(unittest.TestCase):
             ).status_code,
             200,
         )
-        self.assertTrue(self.client.get("/api/state").get_json()["climate"]["demo"])
+        self.assertEqual(
+            self.client.get("/api/state").get_json()["climate"]["days"], []
+        )
 
     def test_nasa_missing_values_and_absent_days(self):
         response = Mock()

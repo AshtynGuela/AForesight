@@ -9,6 +9,9 @@
     <link rel="icon" href="/static/icon.svg" />
     <link rel="stylesheet" href="/static/style.css" />
     <script src="/static/conditions.js" defer></script>
+    <script src="/static/forecast-store.js" defer></script>
+    <script src="/static/history-store.js" defer></script>
+    <script src="/static/journal-store.js" defer></script>
     <script src="/static/farm-assessment.js" defer></script>
     <script src="/static/app.js" defer></script>
     <script src="/static/chat.js" defer></script>
@@ -19,6 +22,10 @@
     <script src="/static/vendor/leaflet/leaflet.js" defer></script>
     <script src="/static/myfarm.js" defer></script>
     <link rel="stylesheet" href="/static/sidebar.css" />
+    <link rel="stylesheet" href="/static/forecasts.css" />
+    <script src="/static/forecasts.js" defer></script>
+    <link rel="stylesheet" href="/static/workspaces.css" />
+    <script src="/static/workspaces.js" defer></script>
   </head>
   <body data-page="overview">
     <header>
@@ -55,9 +62,8 @@
       </aside>
       <main>
         <div id="demo-banner" class="banner" hidden>
-          <strong>Shared demo</strong> · Everyone uses the same sample farm.
-          Please use made-up details and notes. Records can reset when the demo
-          sleeps or restarts.
+          <strong>Shared demo</strong> · Everyone uses the same saved farm.
+          Records can reset when the shared prototype sleeps or restarts.
         </div>
         <div class="context-toolbar">
           <div id="shared-context">Getting your farm…</div>

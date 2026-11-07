@@ -6,7 +6,7 @@ A single-farm prototype for checking weather, comparing crops and keeping field 
 
 ## Submission package
 
-The source ZIP includes the app, images, Philippine boundary data, sourced weather samples and setup instructions. It excludes Python environments, Git history, caches, private databases and API keys. Install dependencies using the steps below for a local run. Set your own provider variables to enable AI locally; the included code alone does not run an offline language model. The hosted demo uses its own server-side configuration and may run an earlier version until redeployed.
+The source ZIP includes the app, images, Philippine boundary data, weather-source adapters and setup instructions. It excludes Python environments, Git history, caches, private databases and API keys. Install dependencies using the steps below for a local run. Set your own provider variables to enable AI locally; the included code alone does not run an offline language model. The hosted demo uses its own server-side configuration and may run an earlier version until redeployed.
 
 ## Run locally
 
@@ -24,12 +24,12 @@ Open http://127.0.0.1:5000 and keep the terminal running. For later runs, double
 
 1. **My Farm** — Enter Philippine coordinates, check the returned location, then save the crop, area and water access. Add soil readings only when you have measurements.
 2. **Dashboard** — Review average daily rainfall, temperature, farm details and suggested actions. **Dates** changes the historical period, up to 366 days.
-3. **Forecast** — Use **Update weather** for the short-range forecast or **Load 30-day outlook** for broader planning. Check the saved dates and data labels.
-4. **Crop Plans** — Answer the drainage question, compare the reasons for each crop and create a draft planting calendar. Calendars are shown on screen and have no saved-plan library yet.
+3. **Forecast** — Use **Update weather** for the short-range forecast or **Load 30-day outlook** for broader planning. The short-range forecast is saved on this device and also powers Farm Performance. Check its dates before relying on it.
+4. **Crop Plans** — Answer the drainage question, compare the reasons for each crop and create a draft planting calendar. The latest calendar, form draft and downloaded comparison are saved on this device for offline reference.
 5. **Field Journal** — Record observations and outcomes. Offline notes wait for syncing in the same browser. Journals are kept for later NLP work.
 6. **Ask for help** — Try “Explain the saved forecast”, “Show historical weather”, “Change my area to 2 hectares” or “Save a note”. Review proposed edits and tap **Save this**.
 
-To import weather, open **Weather data** and use CSV columns `date,temp,rain`. Dates use `YYYY-MM-DD`, temperature uses °C and rainfall uses mm per day. Imports accept 14–1,826 historical rows and replace the active records.
+On first use, the app downloads one year of NASA POWER history for the saved coordinates, ending seven days before today to allow for source delay. ERA5 is the fallback. **Update sourced history** downloads it again. Sample switches, manual weather edits and unverified CSV imports are disabled; missing data stays empty. Your own soil measurements and journal notes remain editable.
 
 ## Set up the chat models
 
@@ -48,7 +48,7 @@ For local use, set variables in the PowerShell window before starting Python. Fo
 
 For Render, enter the variables in the service's **Environment** settings and redeploy. Keys stay on the server. The older `AGRIFORESIGHT_CHAT_MODEL` is a fallback for the default provider only.
 
-Model availability in the selector checks configuration. Send a short farming question with each model to verify access and quota. Recent conversation and farm context go to the chosen provider. Use made-up details for this shared prototype, especially with the Nemotron free endpoint's data-logging terms.
+Model availability in the selector checks configuration. Send a short farming question with each model to verify access and quota. Recent conversation and farm context go to the chosen provider. The hosted app is shared; chat context goes to the selected cloud provider.
 
 ## Deploy or update on Render
 
@@ -104,28 +104,18 @@ To keep edits readable, use `uvx ruff@0.11.13 format .` for Python and `npx --ye
 
 Screens register with `registerPageView` in `static/app.js`. Only the active screen redraws its charts and records. My Farm owns coordinate previews and GPS; the old hidden location screen and retired water simulator have been removed. `time_utils.py` handles Philippine dates and cache freshness.
 
-## Data and credits
+## Data and offline use
 
-Weather comes from NASA POWER and Open-Meteo, including ERA5 history and ECMWF EC46 outlooks. Sample, historical and predicted values carry different meanings. The 30-day outlook supports broad planning and has substantial daily uncertainty. Soil readings come from user input.
+- History: NASA POWER for the saved farm coordinates; ERA5 is the fallback. The first download covers one year and ends seven days before today. No synthetic values, sample switches, unverified CSV uploads or manual weather edits appear in live views.
+- Forecast: Open-Meteo. If Render is rate-limited, the browser tries the same public API directly. No new key is needed. Forecasts cache for three hours, keep their original dates and feed both Forecasts and Farm Performance.
+- Farm Performance: an explainable weather outlook for heat, rain and drying risk. It is not a crop-disease, soil-fertility or yield diagnosis. Missing/old data stays unknown. Open **Why this check?** for values, source times and prototype thresholds.
+- Soil pH/NPK: only actual measurements supplied by the farmer; unavailable readings stay blank. Weather-model surface moisture is labeled as an estimate and cannot diagnose root water need.
+- Journal: farmer-written notes only. NLP is reserved for later. Notes have a local archive and sync queue; form drafts survive reloads. Optional JPG/PNG/WebP photos up to 2 MB stay in IndexedDB on that device. Photos are not uploaded to Render or included in JSON export; keep the originals as a backup.
 
-Philippine boundaries are a simplified 2020 snapshot from geoBoundaries, with original sources NAMRIA, PSA and OCHA Philippines. Distributed by William & Mary geoLab and contributors under [CC BY 3.0 IGO](https://creativecommons.org/licenses/by/3.0/igo/). Preserve this attribution when redistributing. Release details and source URLs are in `data/boundaries/metadata.json`. Coordinate matches provide approximate administrative context.
+Open the app online once and download weather before going offline. The app shell, sourced history, forecasts, notes and saved crop results can then be read on the same browser. New weather, new crop calculations and cloud AI chat still need internet. Old forecasts and cached crop results display their saved dates. Clearing browser/site data also clears local copies, so export a backup first.
 
-My Farm uses locally bundled Leaflet 1.9.4 with Esri satellite imagery and an OpenStreetMap street layer. Tiles need internet access. Use **Choose a point on the map**, check the location preview, then choose **Save new coordinates** or **Cancel**. The point marks a location; farm boundaries and sensor measurements must be supplied separately. Leaflet attribution and license are in `static/vendor/leaflet/LICENSE`.
+Screens follow Figma Desktop 3 (Forecast) and Desktop 4 (Crop Plans). The completed Field Journal is frame `107:338`, named Desktop 6 in the file; Desktop 5 is an unfinished Forecast copy. **More weather tools** keeps the 30-day outlook and comparison tools available. Decorative photos cache after loading and do not block installation of essential offline files.
 
-The My Farm Saved Weather card shows the selected historical rainfall and temperature, with source and dates. At the Legazpi example coordinates (13.1391, 123.7438), **Load sourced Legazpi weather** loads the bundled NASA POWER snapshot and selects its latest available month. Other farm coordinates need a weather download for that point. Weather downloads provide no measured soil chemistry or farm area.
+Weather credits: [NASA POWER](https://power.larc.nasa.gov/), [Open-Meteo](https://open-meteo.com/) under CC BY 4.0, and [MET Norway](https://api.met.no/doc/License) for backup current air estimates. The street-photo tile uses [KartaView](https://kartaview.org/) under CC BY-SA 4.0. Model estimates are not measurements taken on the farm.
 
-The My Farm sensor log shows weather-model estimates, separate from actual soil samples. Open-Meteo supplies air temperature, humidity and surface soil moisture (0–1 cm, displayed as volume percent). If it fails, [MET Norway](https://api.met.no/doc/License) provides backup air estimates under CC BY 4.0; it supplies no soil moisture. The source and time stay visible. Open-Meteo caches for 30 minutes; MET Norway caches for at least three hours and until its expiry header. If both services fail, saved estimates keep their original time, the error remains visible, and repeated updates wait a minute. Render needs no new API keys. Its logs distinguish timeouts, connection problems and provider HTTP errors.
-
-Map controls, location previews, help and the map message share a toolbar so they do not cover one another. Open More Details to hide the map while editing; the help button stays available.
-
-If the server falls back to MET Norway or cannot supply soil moisture, the browser also tries Open-Meteo's public API directly. This needs no key and sends the saved coordinates to Open-Meteo. Successful estimates cache on that device for 30 minutes and stay visible after refreshing the farm. They are separate from database soil samples and are not uploaded as verified sensor records. `static/conditions.js` handles this request and validates timestamps, units and values. Run `node --test tests/test_conditions_client.cjs` to check this path.
-
-Farm Performance keeps its circular design and now shows a **farm health outlook** from existing weather sources. Green/Good means Heat, Rain and Water checks are complete without flags; amber/Watch asks you to check the field; grey means data is missing or outdated. Missing pH/NPK does not block it. Rows show provider values and names. **Why this check?** shows source times, links, rules and actions. This is a weather-risk summary, not a diagnosis of soil fertility, disease or yield.
-
-Opening My Farm automatically requests a missing/old forecast, with a three-minute retry cooldown. **Update sources** refreshes forecast and current estimates using existing keyless endpoints and the browser soil-moisture fallback on Render. Provider caches still apply. Stale, demo and wrong-coordinate data cannot clear a check. Only the next seven days count. Surface moisture is context, not root-zone health. Reference ET0 is not a watering amount. The 35 C / 50 mm / three dry day triggers are prototype rules, not validated crop-health limits. Run `node --test tests/test_farm_assessment.cjs`.
-
-Rules live in `static/farm-assessment.js`, separate from the UI, ready for future crop rules or journal/NLP evidence. Nothing is inferred from journals yet. Optional measured soil reports remain saved for later use, but do not affect this weather-based indicator.
-
-More Details contains compact crop and soil-sample fields. Use Input for typed coordinates or GPS. Location previews stay on the map and are saved separately from other unfinished form edits.
-
-The location tile checks [KartaView](https://kartaview.org/doc/photos) for a public street photo within 500 m of the saved point. Tap a photo to enlarge it without leaving the app. The distance and capture date help distinguish a nearby road from your actual field. Where coverage is missing or the service fails, the tile opens the farm map. Photos need internet access; metadata caches for a day (six hours for no coverage, five minutes for outages). Images are credited to KartaView contributors under [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/). This works on Render without extra keys or paid services.
+The screen code is in `static/forecasts.js`, `static/workspaces.js` and their matching CSS files. `static/forecast-store.js`, `static/history-store.js` and `static/journal-store.js` handle device copies. Run all client checks with `node --test tests/*.cjs`.

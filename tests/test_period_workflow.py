@@ -66,40 +66,17 @@ class PeriodWorkflowTests(unittest.TestCase):
         )
         self.assertEqual(self.client.post("/api/simulate", json={}).status_code, 404)
 
-    def test_record_edit_changes_model_input_and_backup_restores_it(self):
-        climate = self.seed()
-        self.apply_october()
-        original = next(r for r in climate["days"] if r["date"] == "2026-10-15")
+    def test_manual_weather_cannot_replace_source_records(self):
+        self.seed()
+        before = self.client.get("/api/state").json["climate"]
         self.assertEqual(
             self.client.post(
                 "/api/history/record",
                 json={"date": "2026-10-15", "temp": 29, "rain": 99},
             ).status_code,
-            200,
+            410,
         )
-        state = self.client.get("/api/state").get_json()
-        self.assertEqual(
-            next(
-                r["rain"] for r in state["climate"]["days"] if r["date"] == "2026-10-15"
-            ),
-            99,
-        )
-        self.assertIn("unverified", state["climate"]["source"])
-        self.assertIsNone(state["internal"])
-        backups = self.client.get("/api/history/backups").get_json()["backups"]
-        self.assertTrue(backups)
-        self.assertEqual(
-            self.client.post(
-                "/api/history/restore", json={"id": backups[0]["id"]}
-            ).status_code,
-            200,
-        )
-        restored = self.client.get("/api/state").get_json()
-        self.assertEqual(
-            next(r for r in restored["climate"]["days"] if r["date"] == "2026-10-15"),
-            original,
-        )
-        self.assertEqual(restored["farm"], state["farm"])
+        self.assertEqual(self.client.get("/api/state").json["climate"], before)
 
     def test_missing_period_is_not_silently_replaced_with_2025(self):
         self.assertEqual(self.apply_october().status_code, 400)

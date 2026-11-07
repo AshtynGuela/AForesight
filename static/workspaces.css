@@ -1,0 +1,434 @@
+/* Desktop 4 Crop Plans and the completed Field Journal frame (107:338). */
+body:is([data-page="planting"], [data-page="journal"]) {
+  background: #fff;
+  color: #262626;
+}
+body:is([data-page="planting"], [data-page="journal"]) > header,
+body:is([data-page="planting"], [data-page="journal"]) .context-toolbar,
+body:is([data-page="planting"], [data-page="journal"]) #period-panel,
+body:is([data-page="planting"], [data-page="journal"]) footer {
+  display: none;
+}
+body:is([data-page="planting"], [data-page="journal"]) .layout {
+  max-width: none;
+  min-height: 100dvh;
+}
+body:is([data-page="planting"], [data-page="journal"]) main {
+  padding: 0;
+  max-width: none;
+  position: relative;
+}
+body:is([data-page="planting"], [data-page="journal"])::before {
+  content: "";
+  position: fixed;
+  inset: 0 0 0 597px;
+  background: #233522 url("/static/planning-assets/tea-harvest.jpg") center
+    52% / cover no-repeat;
+  z-index: 0;
+}
+body[data-page="journal"]::before {
+  inset: 0 auto 0 84px;
+  width: calc(100dvh * 1.83348);
+  min-width: calc(100vw - 84px);
+  background: #493820 url("/static/journal-assets/tools.jpg") left top / auto
+    100% no-repeat;
+  transform: scaleX(-1);
+}
+body:is([data-page="planting"], [data-page="journal"]) #notice:not(:empty),
+body:is([data-page="planting"], [data-page="journal"]) #offline:not([hidden]) {
+  position: relative;
+  max-width: 557px;
+  background: #eee8d8;
+  margin: 0;
+  border-radius: 0;
+  font-size: 12px;
+  padding: 12px 22px;
+}
+.workspace-panel {
+  position: relative;
+  width: 557px;
+  max-width: 100%;
+  min-height: 100dvh;
+  padding: 64px 38px 34px 30px;
+  background: #e3e4d6;
+  border-radius: 0 24px 24px 0;
+  box-shadow: 4px 0 8px #0003;
+  font-family: "JetBrains Mono", monospace;
+}
+.workspace-panel h1 {
+  font-size: 30px;
+  letter-spacing: 0;
+  line-height: 1.35;
+  margin: 0 0 50px;
+}
+.workspace-panel > p {
+  font-size: 14px;
+  line-height: 1.6;
+  margin: 0 0 14px;
+}
+.workspace-panel .panel,
+.workspace-panel .wj-saved,
+.workspace-panel .wj-quick {
+  border: 0;
+  background: #00000014;
+  border-radius: 30px;
+  box-shadow:
+    inset 0 1px 2px #0002,
+    0 1px 0 #fff5;
+  padding: 22px;
+  margin: 0 0 22px;
+}
+.workspace-panel input,
+.workspace-panel select {
+  background: #00000014;
+  border: 0;
+  border-radius: 30px;
+  box-shadow:
+    inset 0 1px 2px #0002,
+    0 1px 0 #fff5;
+  color: #262626;
+  font:
+    700 14px/1.4 "JetBrains Mono",
+    monospace;
+  min-height: 40px;
+  padding: 9px 16px;
+  max-width: 100%;
+}
+.workspace-panel select {
+  appearance: none;
+  background: #00000014 url("/static/forecast-assets/arrow-down.svg") right 10px
+    center / 24px no-repeat;
+  padding-right: 38px;
+}
+.workspace-panel label {
+  font-size: 11px;
+  line-height: 1.5;
+  color: #333;
+}
+.workspace-panel button {
+  font:
+    12px/1.4 "JetBrains Mono",
+    monospace;
+  border-radius: 10px;
+}
+#planting .cp-choice {
+  min-height: 215px;
+  margin-right: 18px;
+}
+#planting > p {
+  margin-bottom: 3px;
+}
+#planting .cp-choice .cp-drainage {
+  font-size: 11px;
+}
+#planting .cp-choice p {
+  font-size: 11px;
+  line-height: 1.6;
+  margin: 8px 0;
+}
+#planting .cp-choice button {
+  width: 100%;
+  margin-top: 8px;
+  background: #22633a;
+}
+#planting .cp-calendar > summary {
+  font-size: 12px;
+  min-height: 44px;
+  line-height: 1.6;
+}
+#planting .form-grid {
+  grid-template-columns: 1fr;
+  gap: 16px;
+}
+#planting #crop-suggestions {
+  font:
+    13px/1.7 "Segoe UI",
+    sans-serif;
+}
+#planting #crop-suggestions h2 {
+  font-size: 21px;
+}
+#planting #crop-suggestions .panel {
+  background: #f4f4f4;
+  border-radius: 18px;
+}
+#journal {
+  padding: 71px 48px 32px 38px;
+}
+#journal h1 {
+  font-size: 25px;
+  margin: 0 0 13px;
+}
+#journal #journal-form {
+  padding: 20px;
+  min-height: 282px;
+}
+#journal .form-grid {
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 14px 24px;
+}
+#journal .form-grid label {
+  font-size: 8px;
+  margin: 0;
+}
+#journal input,
+#journal select {
+  font-size: 12px;
+  padding: 9px 12px;
+  min-width: 0;
+  width: 100%;
+  min-height: 36px;
+  margin-top: 0;
+}
+#journal select {
+  padding-right: 30px;
+}
+#journal input[type="date"] {
+  padding-top: 6px;
+  padding-bottom: 6px;
+  background-image: url("/static/journal-assets/calendar.svg");
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+}
+#journal input[type="date"]::-webkit-calendar-picker-indicator {
+  opacity: 0;
+  cursor: pointer;
+  width: 24px;
+  height: 24px;
+}
+#journal textarea {
+  background: #f4f4f4;
+  border: 0;
+  border-radius: 12px;
+  width: 100%;
+  font:
+    13px/1.6 "Segoe UI",
+    sans-serif;
+}
+#journal .wj-upload {
+  border: 2px dashed #22633a;
+  border-radius: 15px;
+  min-height: 52px;
+  margin: 18px 0 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  cursor: pointer;
+  color: #22633a;
+}
+#journal .wj-upload strong {
+  font-size: 36px;
+  line-height: 1;
+}
+#journal .wj-upload span {
+  font-size: 8px;
+  line-height: 1;
+}
+#journal .wj-upload input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  overflow: hidden;
+  padding: 0;
+  min-height: 0;
+}
+#journal .wj-upload:focus-within {
+  outline: 2px solid #22633a;
+  outline-offset: 3px;
+}
+#journal .wj-note-details {
+  margin: 14px 0 0;
+  font-size: 11px;
+}
+#journal .wj-note-details > summary {
+  min-height: 32px;
+}
+#journal .wj-saved {
+  width: 470px;
+  max-width: 100%;
+  min-height: 293px;
+  padding: 10px;
+  color: #333;
+}
+#journal .wj-saved-heading {
+  display: flex;
+  align-items: flex-start;
+  margin-left: 5px;
+  min-height: 49px;
+}
+#journal .wj-saved-caption {
+  padding-top: 14px;
+}
+#journal .wj-saved-heading h2 {
+  font:
+    500 12px/15px "JetBrains Mono",
+    monospace;
+  margin: 0;
+}
+#journal .wj-saved-heading img {
+  display: block;
+  flex-shrink: 0;
+}
+#journal #queue-status {
+  font:
+    300 8px/11px "JetBrains Mono",
+    monospace;
+  color: #333;
+  margin: 0 0 0 2px;
+}
+#journal #journal-list {
+  display: block;
+  max-height: 210px;
+  overflow: auto;
+  margin: 0;
+}
+#journal #journal-list .table-scroll {
+  overflow: auto;
+  max-height: none;
+}
+#journal .wj-notes-table {
+  width: 100%;
+  min-width: 450px;
+  table-layout: fixed;
+  color: #333;
+  font:
+    300 8px/11px "JetBrains Mono",
+    monospace;
+}
+#journal .wj-notes-table th,
+#journal .wj-notes-table td {
+  padding: 4px 0;
+  border: 0;
+  font: inherit;
+  vertical-align: top;
+  overflow-wrap: anywhere;
+  background: transparent;
+  color: inherit;
+}
+#journal .wj-notes-table th {
+  height: 25px;
+  padding: 0 0 2px;
+  vertical-align: bottom;
+  border-bottom: 1px solid #9999;
+}
+#journal .wj-notes-table tbody tr {
+  height: 52px;
+}
+#journal .wj-notes-table td:not(:first-child) {
+  padding-right: 5px;
+}
+#journal .wj-notes-table time {
+  white-space: nowrap;
+}
+#journal .wj-note-photo {
+  display: block;
+  width: 51px;
+  height: 44px;
+  object-fit: cover;
+  border-radius: 15px;
+}
+#journal .wj-result {
+  display: inline-flex;
+  align-items: flex-start;
+  gap: 2px;
+}
+#journal .wj-result img {
+  display: block;
+  flex-shrink: 0;
+}
+#journal .wj-result[data-outcome="better"] {
+  color: #007637;
+}
+#journal .wj-result:is([data-outcome="same"], [data-outcome="worse"]) {
+  color: #b57a00;
+}
+#journal .wj-saved-empty {
+  margin: 18px 0 0;
+  font:
+    300 10px/1.5 "JetBrains Mono",
+    monospace;
+  color: #555;
+}
+#journal #sync {
+  padding: 7px;
+  margin: 8px 0 0 auto;
+  min-height: 32px;
+  font-size: 10px;
+  background: transparent;
+  color: #22633a;
+}
+#journal .wj-quick {
+  width: 361px;
+  max-width: 100%;
+  padding: 14px 44px;
+}
+#journal .wj-quick h2 {
+  font:
+    500 12px/1.5 "JetBrains Mono",
+    monospace;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 12px;
+}
+#journal .wj-quick button {
+  width: 100%;
+  margin: 5px 0;
+  min-height: 24px;
+  padding: 3px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  background: transparent;
+  color: #22633a;
+  border: 1px solid #22633a;
+}
+#journal .wj-quick button[type="submit"] {
+  background: #22633a;
+  color: #fff;
+  box-shadow: 2px 2px 5px #0003;
+}
+#journal .wj-quick button img {
+  max-width: none;
+  display: block;
+}
+@media (max-width: 800px) {
+  body:is([data-page="planting"], [data-page="journal"])::before {
+    display: none;
+  }
+  .workspace-panel {
+    width: 100%;
+    border-radius: 0;
+  }
+}
+@media (max-width: 550px) {
+  .workspace-panel,
+  #journal {
+    padding: 26px 18px 90px;
+  }
+  .workspace-panel h1 {
+    margin-bottom: 28px;
+  }
+  #journal .form-grid {
+    gap: 12px;
+  }
+  #journal .form-grid label {
+    font-size: 11px;
+  }
+  #journal input,
+  #journal select {
+    min-height: 44px;
+  }
+  #journal .wj-quick button {
+    min-height: 44px;
+  }
+  #journal .panel {
+    padding: 16px;
+  }
+  #planting .cp-choice {
+    margin-right: 0;
+  }
+}

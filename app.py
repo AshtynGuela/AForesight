@@ -2,8 +2,6 @@
 
 import json
 import hashlib
-import csv
-import io
 import os
 import sqlite3
 from contextlib import contextmanager
@@ -13,7 +11,7 @@ from flask import Flask, jsonify, request, send_from_directory, g
 from werkzeug.exceptions import HTTPException
 import requests
 from engine import validate_profile, recommend, number, CROPS
-from climate import demo, fetch_power, fetch_archive
+from climate import empty_history, sourced, fetch_power, fetch_archive
 from location import lookup, coordinates
 from forecast import fetch_forecast, fetch_archived_forecast, fetch_conditions
 from street_photos import fetch_street_photo
@@ -147,14 +145,16 @@ def create_app(database=None):
 
     def climate_for(farm):
         climate = get("climate")
-        if climate and (climate["latitude"], climate["longitude"]) == (
+        if sourced(climate) and (climate["latitude"], climate["longitude"]) == (
             farm["latitude"],
             farm["longitude"],
         ):
             return climate
-        return demo(farm["latitude"], farm["longitude"])
+        return empty_history(farm["latitude"], farm["longitude"])
 
     def history_label(climate):
+        if not climate.get("days"):
+            return "No sourced history"
         if climate.get("demo"):
             return (
                 "Edited sample data"
@@ -212,10 +212,8 @@ def create_app(database=None):
     def dataset(name, farm):
         if name in (None, "current"):
             return climate_for(farm)
-        if name not in ("legazpi", "naga"):
-            raise ValueError("Unknown sample dataset.")
-        return json.loads(
-            (ROOT / "data" / "samples" / f"{name}.json").read_text(encoding="utf-8")
+        raise ValueError(
+            "Use downloaded weather for your saved farm. Sample datasets are disabled."
         )
 
     def active_period(farm):
@@ -290,62 +288,9 @@ def create_app(database=None):
 
     @app.post("/api/history/record")
     def edit_weather_record():
-        data = body()
-        farm = get("farm", DEFAULT_FARM)
-        climate = climate_for(farm)
-        a, _ = validate_period(data.get("date"), data.get("date"))
-        operation = data.get("operation", "upsert")
-        if operation not in ("upsert", "delete"):
-            raise ValueError("Choose save or delete.")
-        records = {r["date"]: r for r in climate["days"]}
-        before = records.get(a.isoformat())
-        if operation == "delete":
-            if before is None:
-                raise ValueError("No record exists on this date.")
-            del records[a.isoformat()]
-        else:
-            records[a.isoformat()] = {
-                "date": a.isoformat(),
-                "temp": number(data.get("temp"), "Mean temperature", -60, 65),
-                "rain": number(data.get("rain"), "Daily rain", 0, 3000),
-            }
-        if len(records) < 7:
-            raise ValueError("Keep at least seven daily records.")
-        if (
-            date.fromisoformat(max(records)) - date.fromisoformat(min(records))
-        ).days > 1826:
-            raise ValueError(
-                "Keep the dataset within five years; load another period first."
-            )
-        timestamp = datetime.now(timezone.utc).isoformat()
-        put("history_backup:" + timestamp, climate)
-        base = climate.get("base_source", climate["source"])
-        days = sorted(records.values(), key=lambda r: r["date"])
-        updated = {
-            **climate,
-            "base_source": base,
-            "source": "Edited " + base + " — includes unverified user values",
-            "kind": "user_edited",
-            "days": days,
-            "missing_days": (
-                date.fromisoformat(days[-1]["date"])
-                - date.fromisoformat(days[0]["date"])
-            ).days
-            + 1
-            - len(days),
-            "edited_at": timestamp,
-            "edits": climate.get("edits", [])
-            + [
-                {
-                    "date": a.isoformat(),
-                    "before": before,
-                    "after": records.get(a.isoformat()),
-                    "at": timestamp,
-                }
-            ],
-        }
-        put("climate", updated)
-        return jsonify(ok=True)
+        return jsonify(
+            error="Weather values come from source downloads. Manual weather editing is disabled."
+        ), 410
 
     @app.get("/api/history/backups")
     def history_backups():
@@ -357,7 +302,7 @@ def create_app(database=None):
         backups = []
         for row in rows:
             climate = json.loads(row["value"])
-            if (climate["latitude"], climate["longitude"]) == (
+            if sourced(climate) and (climate["latitude"], climate["longitude"]) == (
                 farm["latitude"],
                 farm["longitude"],
             ):
@@ -380,7 +325,7 @@ def create_app(database=None):
             raise ValueError("Choose a valid saved backup.")
         climate = get(identifier)
         farm = get("farm", DEFAULT_FARM)
-        if not climate or (climate["latitude"], climate["longitude"]) != (
+        if not sourced(climate) or (climate["latitude"], climate["longitude"]) != (
             farm["latitude"],
             farm["longitude"],
         ):
@@ -525,6 +470,15 @@ def create_app(database=None):
         forecast = get(key)
         if forecast and is_recent(forecast.get("retrieved_at"), 10800):
             return jsonify(forecast=forecast, cached=True)
+        status_key = key + ":retry"
+        retry = get(status_key)
+        if retry and datetime.fromisoformat(retry["retry_at"]) > datetime.now(
+            timezone.utc
+        ):
+            return jsonify(
+                error="Forecast update is cooling down. Try the device connection or wait a few minutes.",
+                retry_at=retry["retry_at"],
+            ), 503
         try:
             forecast = fetch_forecast(farm["latitude"], farm["longitude"])
         except (requests.RequestException, ValueError, KeyError, TypeError) as error:
@@ -534,6 +488,23 @@ def create_app(database=None):
                 "Forecast update failed: type=%s status=%s",
                 type(error).__name__,
                 status,
+            )
+            # Avoid repeatedly calling a shared-IP provider while it is blocked.
+            cooldown = 300
+            if response is not None:
+                try:
+                    cooldown = min(
+                        3600, max(60, int(response.headers.get("Retry-After", "300")))
+                    )
+                except (ValueError, TypeError):
+                    pass
+            put(
+                status_key,
+                {
+                    "retry_at": (
+                        datetime.now(timezone.utc) + timedelta(seconds=cooldown)
+                    ).isoformat()
+                },
             )
             reason = (
                 "The forecast service is busy. Try again shortly."
@@ -546,6 +517,7 @@ def create_app(database=None):
                 error=reason + " Saved forecasts are kept with their original dates."
             ), 502
         put(key, forecast)
+        put(status_key, None)
         archive("open_meteo", forecast)
         return jsonify(forecast=forecast, cached=False)
 
@@ -691,97 +663,75 @@ def create_app(database=None):
     def climate_route():
         data = body()
         farm = get("farm", DEFAULT_FARM)
-        if data.get("mode") not in (None, "demo", "nasa", "sample"):
-            raise ValueError("Choose NASA history or sample data.")
-        if data.get("mode") == "sample":
-            name = data.get("dataset")
-            if name not in ("legazpi", "naga"):
-                raise ValueError("Choose the Legazpi or Naga weather example.")
-            climate = dataset(name, farm)
-            if (farm["latitude"], farm["longitude"]) != (
-                climate["latitude"],
-                climate["longitude"],
-            ):
-                raise ValueError(
-                    "This weather example belongs to "
-                    + str(climate["latitude"])
-                    + ", "
-                    + str(climate["longitude"])
-                    + ". Save those coordinates first, or download weather for your own location."
-                )
-            if climate.get("demo") or not climate.get("source_url"):
-                raise ValueError(
-                    "The public weather snapshot has no verified source metadata."
-                )
-            end = date.fromisoformat(climate["days"][-1]["date"])
-            period = {
-                "start": end.replace(day=1).isoformat(),
-                "end": end.isoformat(),
-                "provider": "saved",
-                "latitude": farm["latitude"],
-                "longitude": farm["longitude"],
-            }
-            stamp = datetime.now(timezone.utc).isoformat()
-            with db() as conn:
-                previous = conn.execute(
-                    "SELECT value FROM state WHERE key=?", ("climate",)
-                ).fetchone()
-                if previous:
-                    conn.execute(
-                        "INSERT INTO state VALUES (?,?)",
-                        ("history_backup:" + stamp, previous["value"]),
-                    )
-                for key, value in [("climate", climate), ("analysis_period", period)]:
-                    conn.execute(
-                        "INSERT INTO state VALUES (?,?) ON CONFLICT(key) DO UPDATE SET value=excluded.value",
-                        (key, json.dumps(value)),
-                    )
-            return jsonify(climate=climate, period=period)
-        if data.get("mode") == "demo":
-            climate = demo(farm["latitude"], farm["longitude"])
-        else:
+        if data.get("mode") not in (None, "nasa"):
+            raise ValueError("Download sourced history; sample weather is disabled.")
+        try:
             start, end = data.get("start", ""), data.get("end", "")
+            a, b = date.fromisoformat(start), date.fromisoformat(end)
+        except (ValueError, TypeError):
+            raise ValueError("Use valid start and end dates.")
+        if (
+            a > b
+            or b >= ph_today()
+            or a < date(1981, 1, 1)
+            or not 6 <= (b - a).days <= 1095
+        ):
+            raise ValueError(
+                "Choose 7–1096 historical days from 1981 onward, ending before today."
+            )
+        key = f"period:nasa:{farm['latitude']}:{farm['longitude']}:{start}:{end}"
+        climate = cached_history(key)
+        if not sourced(climate):
             try:
-                a, b = date.fromisoformat(start), date.fromisoformat(end)
-            except (ValueError, TypeError):
-                raise ValueError("Use valid start and end dates.")
-            if (
-                a > b
-                or b >= ph_today()
-                or a < date(1981, 1, 1)
-                or not 6 <= (b - a).days <= 1095
-            ):
-                raise ValueError(
-                    "Choose 7–1096 historical days from 1981 onward, ending before today."
-                )
-            key = f"period:nasa:{farm['latitude']}:{farm['longitude']}:{start}:{end}"
-            climate = cached_history(key)
-            if climate is None:
-                try:
-                    climate = fetch_power(
-                        farm["latitude"], farm["longitude"], start, end
-                    )
-                except (requests.RequestException, KeyError, ValueError) as error:
-                    reason = (
-                        getattr(error.args[0], "reason", None) if error.args else None
-                    )
-                    app.logger.warning(
-                        "NASA history request failed (%s / %s).",
-                        type(error).__name__,
-                        type(reason).__name__,
-                    )
-                    message = (
-                        "NASA POWER could not be reached. Check the internet connection and retry; previous records are kept. Public samples remain available in Forecasts."
-                        if isinstance(error, requests.ConnectionError)
-                        else "NASA POWER could not supply usable data. Previous records are kept; try another historical period."
-                    )
-                    return jsonify(error=message), 502
-                climate = {
-                    **climate,
-                    "cached_at": datetime.now(timezone.utc).isoformat(),
-                }
-                put(key, climate)
+                climate = fetch_power(farm["latitude"], farm["longitude"], start, end)
+            except (requests.RequestException, KeyError, ValueError, TypeError):
+                return jsonify(
+                    error="NASA POWER could not download these dates. Existing sourced records are kept."
+                ), 502
+            climate = {**climate, "cached_at": datetime.now(timezone.utc).isoformat()}
+            put(key, climate)
         put("climate", climate)
+        return jsonify(climate=climate)
+
+    @app.post("/api/history/sourced")
+    def load_sourced_history():
+        """Download one year for the saved point; retain existing real data on failure."""
+        body()
+        farm = get("farm", DEFAULT_FARM)
+        end = ph_today() - timedelta(days=7)
+        start = end - timedelta(days=364)
+        key = f"sourced-history:{farm['latitude']}:{farm['longitude']}:{end}"
+        climate = cached_history(key)
+        if not sourced(climate):
+            for provider in (fetch_power, fetch_archive):
+                try:
+                    candidate = provider(
+                        farm["latitude"],
+                        farm["longitude"],
+                        start.isoformat(),
+                        end.isoformat(),
+                    )
+                    if not sourced(candidate):
+                        raise ValueError("No sourced history returned.")
+                    climate = {
+                        **candidate,
+                        "cached_at": datetime.now(timezone.utc).isoformat(),
+                    }
+                    put(key, climate)
+                    break
+                except (requests.RequestException, ValueError, KeyError, TypeError):
+                    app.logger.warning(
+                        "Sourced history unavailable from %s",
+                        provider.__name__
+                        if hasattr(provider, "__name__")
+                        else "provider",
+                    )
+            else:
+                return jsonify(
+                    error="Historical weather could not download. Existing sourced records are kept; no sample data is substituted."
+                ), 502
+        put("climate", climate)
+        put("analysis_period", None)
         return jsonify(climate=climate)
 
     @app.post("/api/model")
@@ -1531,56 +1481,9 @@ def create_app(database=None):
 
     @app.post("/api/history/import")
     def import_history():
-        data = body()
-        text = data.get("csv", "")
-        if not isinstance(text, str) or len(text) > 300000:
-            raise ValueError("CSV must be smaller than 300 KB.")
-        rows = list(csv.DictReader(io.StringIO(text.lstrip("\ufeff"))))
-        if not 14 <= len(rows) <= 1826:
-            raise ValueError("Import 14–1826 daily rows with date,temp,rain headers.")
-        seen = set()
-        days = []
-        for row in rows:
-            try:
-                day = date.fromisoformat(row["date"])
-            except (KeyError, ValueError, TypeError):
-                raise ValueError("Each row needs an ISO date (YYYY-MM-DD).")
-            if day >= ph_today() or day < date(1981, 1, 1) or day in seen:
-                raise ValueError(
-                    "Dates must be unique, historical and from 1981 onward."
-                )
-            seen.add(day)
-            days.append(
-                {
-                    "date": day.isoformat(),
-                    "temp": number(row.get("temp"), "Daily temperature (C)", -60, 65),
-                    "rain": number(row.get("rain"), "Daily rain (mm)", 0, 3000),
-                }
-            )
-        days.sort(key=lambda r: r["date"])
-        if (
-            date.fromisoformat(days[-1]["date"]) - date.fromisoformat(days[0]["date"])
-        ).days > 1826:
-            raise ValueError("Keep the import within five years.")
-        farm = get("farm", DEFAULT_FARM)
-        climate = {
-            "source": "Uploaded daily records — user supplied, unverified",
-            "kind": "user_supplied",
-            "demo": False,
-            "latitude": farm["latitude"],
-            "longitude": farm["longitude"],
-            "days": days,
-            "missing_days": (
-                date.fromisoformat(days[-1]["date"])
-                - date.fromisoformat(days[0]["date"])
-            ).days
-            + 1
-            - len(days),
-            "retrieved_at": datetime.now(timezone.utc).isoformat(),
-        }
-        put("climate", climate)
-        put("analysis_period", None)
-        return jsonify(climate=climate)
+        return jsonify(
+            error="Use the source-download controls. Unverified weather uploads are disabled."
+        ), 410
 
     @app.post("/api/journal")
     def journal():
@@ -1613,6 +1516,10 @@ def create_app(database=None):
         item["created_at"] = datetime.now(timezone.utc).isoformat()
         item["municipality"] = farm["municipality"]
         item["schema_version"] = 2
+        field = data.get("field", "")
+        if not isinstance(field, str) or len(field) > 120:
+            raise ValueError("Field name must be at most 120 characters.")
+        item["field"] = field.strip()
         context = data.get("farm_context")
         if context is not None:
             if not isinstance(context, dict) or len(json.dumps(context)) > 2000:

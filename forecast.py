@@ -68,7 +68,8 @@ def fetch_forecast(latitude, longitude):
             "forecast_days": 7,
             "temperature_unit": "celsius",
             "precipitation_unit": "mm",
-            "daily": "temperature_2m_mean,temperature_2m_max,temperature_2m_min,precipitation_sum,precipitation_probability_max,et0_fao_evapotranspiration",
+            "daily": "temperature_2m_mean,temperature_2m_max,temperature_2m_min,precipitation_sum,precipitation_probability_max,et0_fao_evapotranspiration,weather_code,wind_speed_10m_max",
+            "wind_speed_unit": "kmh",
         },
         timeout=(8, 25),
     )
@@ -84,6 +85,8 @@ def fetch_forecast(latitude, longitude):
         "rain": ("precipitation_sum", 0, 3000),
         "probability": ("precipitation_probability_max", 0, 100),
         "et0": ("et0_fao_evapotranspiration", 0, 100),
+        "weather_code": ("weather_code", 0, 99),
+        "wind": ("wind_speed_10m_max", 0, 500),
     }
     for i, day in enumerate(daily["time"]):
         try:

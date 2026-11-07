@@ -143,29 +143,25 @@ class PlanningAPITests(unittest.TestCase):
     setUp = test_app.PrototypeTests.setUp
     tearDown = test_app.PrototypeTests.tearDown
 
-    def test_import_does_not_accept_duplicate_dates_or_change_journal(self):
-        csv = "date,temp,rain\n" + "\n".join(
-            f"2025-01-{i:02d},27,0" for i in range(1, 15)
-        )
-        self.assertEqual(
-            self.client.post("/api/history/import", json={"csv": csv}).status_code, 200
-        )
-        self.assertIn(
-            "unverified", self.client.get("/api/state").get_json()["climate"]["source"]
-        )
+    def test_unverified_weather_imports_are_disabled(self):
+        before = self.client.get("/api/state").json
         self.assertEqual(
             self.client.post(
-                "/api/history/import", json={"csv": csv + "\n2025-01-01,28,1"}
+                "/api/history/import", json={"csv": "date,temp,rain"}
             ).status_code,
-            400,
+            410,
         )
-        self.assertEqual(self.client.get("/api/state").get_json()["journals"], [])
+        after = self.client.get("/api/state").json
+        self.assertEqual(before["climate"], after["climate"])
+        self.assertEqual(before["journals"], after["journals"])
 
-    def test_model_sample_does_not_change_profile_or_active_weather(self):
-        before = self.client.get("/api/state").get_json()
-        response = self.client.post("/api/model", json={"dataset": "legazpi"})
-        self.assertEqual(response.status_code, 200)
-        after = self.client.get("/api/state").get_json()
+    def test_model_sample_is_disabled_without_changing_farm(self):
+        before = self.client.get("/api/state").json
+        response = self.client.post(
+            "/api/model", json={"dataset": "legazpi", "mode": "forward"}
+        )
+        self.assertEqual(response.status_code, 400)
+        after = self.client.get("/api/state").json
         self.assertEqual(before["farm"], after["farm"])
         self.assertEqual(before["climate"], after["climate"])
 
