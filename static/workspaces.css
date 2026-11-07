@@ -345,6 +345,23 @@ body:is([data-page="planting"], [data-page="journal"]) #offline:not([hidden]) {
 }
 #journal .wj-notes-table tbody tr {
   height: 52px;
+  cursor: pointer;
+}
+#journal .wj-notes-table tbody tr:hover,
+#journal .wj-notes-table tbody tr:focus-within {
+  background: #00000008;
+}
+#journal .wj-note-open {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  overflow-wrap: anywhere;
+}
+#journal .wj-note-open:hover {
+  text-decoration: underline;
 }
 #journal .wj-notes-table td:not(:first-child) {
   padding-right: 5px;
@@ -507,6 +524,52 @@ body:is([data-page="planting"], [data-page="journal"]) #offline:not([hidden]) {
 }
 .wj-crop-done {
   width: 100%;
+}
+.wj-note-dialog {
+  width: min(520px, calc(100vw - 24px));
+}
+.wj-note-dialog h2 {
+  margin: 0 0 14px;
+  font-size: 22px;
+}
+.wj-note-dialog h3 {
+  margin: 16px 0 4px;
+  font-size: 15px;
+}
+.wj-note-facts {
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr);
+  gap: 6px 16px;
+  margin: 0;
+  font-size: 14px;
+}
+.wj-note-facts dt {
+  font-weight: 600;
+}
+.wj-note-facts dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+.wj-note-text {
+  margin: 0 0 12px;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.wj-note-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 16px;
+}
+.wj-note-dialog .wj-note-delete {
+  background: #f9eeee;
+  color: #872727;
+}
+.wj-note-message:empty {
+  display: none;
+}
+.wj-note-edit label {
+  margin: 0 0 10px;
 }
 @media (max-width: 800px) {
   body:is([data-page="planting"], [data-page="journal"])::before {

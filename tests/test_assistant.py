@@ -63,14 +63,18 @@ class AssistantTests(unittest.TestCase):
 
     def test_note_retry_does_not_duplicate(self):
         self.chat("Save a note")
-        r = self.chat("Watered the field today")
+        wording = "I added fertilizer to the rice field."
+        r = self.chat(wording)
 
         self.assertIn("Save this", r.json["choices"])
 
         self.chat("Save this")
         self.chat("Save this")
 
-        self.assertEqual(len(self.client.get("/api/state").json["journals"]), 1)
+        notes = self.client.get("/api/state").json["journals"]
+        self.assertEqual(len(notes), 1)
+        self.assertEqual(notes[0]["technique"], wording)
+        self.assertEqual(notes[0]["note"], wording)
 
     def test_drainage_conversation(self):
         self.assertIn("Drains well", self.chat("Choose a crop").json["choices"])

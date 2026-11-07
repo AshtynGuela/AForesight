@@ -136,12 +136,16 @@ def create_app(database=None):
 
     def entries():
         with db() as conn:
-            return [
+            rows = [
                 json.loads(r["payload"])
                 for r in conn.execute(
                     "SELECT payload FROM journals ORDER BY rowid DESC"
                 )
             ]
+        return (
+            [row for row in rows if not row.get("deleted")],
+            [row["id"] for row in rows if row.get("deleted")],
+        )
 
     def climate_for(farm):
         climate = get("climate")
@@ -381,7 +385,7 @@ def create_app(database=None):
     def state():
         farm = get("farm", DEFAULT_FARM)
         climate = climate_for(farm)
-        journals = entries()
+        journals, deleted_journal_ids = entries()
         forecast = saved_forecast(farm["latitude"], farm["longitude"])
         internal = get(model_key(climate))
         period = active_period(farm)
@@ -446,6 +450,7 @@ def create_app(database=None):
             journals=journals,
             forecast=forecast,
             internal=internal,
+            deleted_journal_ids=deleted_journal_ids,
             saved_evaluation=scores(farm, climate),
             recommendation=summary,
         )
@@ -1106,12 +1111,16 @@ def create_app(database=None):
                     else:
                         edits = {}
                         if pending["kind"] == "note":
+                            note = pending["value"]
+                            action_text = " ".join(note.split())
                             item = {
                                 "id": pending["id"],
                                 "date": pending["date"],
                                 "crop": current_farm["crop"],
-                                "note": pending["value"],
-                                "technique": "Field note via assistant",
+                                "note": note,
+                                "technique": action_text
+                                if len(action_text) <= 120
+                                else action_text[:119].rstrip() + "…",
                                 "outcome": "unobserved",
                                 "yield_kg": None,
                                 "municipality": current_farm["municipality"],
@@ -1488,13 +1497,32 @@ def create_app(database=None):
     @app.post("/api/journal")
     def journal():
         data = body()
-        for key in ("id", "date", "crop", "note", "technique", "outcome"):
+        operation = data.get("operation", "add")
+        if operation not in ("add", "edit", "delete"):
+            raise ValueError("Invalid journal operation.")
+        note_id = data.get("id")
+        if not isinstance(note_id, str) or not note_id.strip() or len(note_id) > 120:
+            raise ValueError("Invalid journal id.")
+        note_id = note_id.strip()
+        if operation == "delete":
+            with db() as conn:
+                # Keep only the ID so an old offline retry cannot restore a deleted note.
+                conn.execute(
+                    "INSERT INTO journals VALUES (?,?) ON CONFLICT(id) DO UPDATE SET payload=excluded.payload",
+                    (note_id, json.dumps({"id": note_id, "deleted": True})),
+                )
+            return jsonify(ok=True, deleted=True)
+
+        for key in ("date", "crop", "technique", "outcome"):
             if (
                 not isinstance(data.get(key), str)
                 or not data[key].strip()
-                or len(data[key]) > (2000 if key == "note" else 120)
+                or len(data[key]) > 120
             ):
                 raise ValueError(f"Invalid journal {key}.")
+        note = data.get("note", "")
+        if not isinstance(note, str) or len(note) > 2000:
+            raise ValueError("Field notes must be at most 2,000 characters.")
         if data["crop"] not in CROPS or data["outcome"] not in (
             "unobserved",
             "better",
@@ -1508,10 +1536,8 @@ def create_app(database=None):
         except ValueError:
             raise ValueError("Journal date must be today or earlier.")
         farm = get("farm", DEFAULT_FARM)
-        item = {
-            k: data[k].strip()
-            for k in ("id", "date", "crop", "note", "technique", "outcome")
-        }
+        item = {k: data[k].strip() for k in ("date", "crop", "technique", "outcome")}
+        item.update(id=note_id, note=note.strip())
         item["yield_kg"] = number(data.get("yield_kg"), "Yield", 0, 10000000, True)
         item["created_at"] = datetime.now(timezone.utc).isoformat()
         item["municipality"] = farm["municipality"]
@@ -1548,12 +1574,34 @@ def create_app(database=None):
                 raise ValueError("Invalid journal timestamp.")
             item["recorded_at"] = recorded
         with db() as conn:
-            # Retries of an offline submission cannot create duplicate entries.
+            conn.execute("BEGIN IMMEDIATE")
+            row = conn.execute(
+                "SELECT payload FROM journals WHERE id=?", (note_id,)
+            ).fetchone()
+            if row:
+                saved = json.loads(row["payload"])
+                if saved.get("deleted"):
+                    return jsonify(ok=True, deleted=True)
+                if operation == "add":
+                    return jsonify(ok=True, journal=saved)
+                for key in (
+                    "date",
+                    "crop",
+                    "technique",
+                    "outcome",
+                    "note",
+                    "field",
+                    "yield_kg",
+                ):
+                    saved[key] = item[key]
+                item = saved
+            if operation == "edit":
+                item["updated_at"] = datetime.now(timezone.utc).isoformat()
             conn.execute(
-                "INSERT OR IGNORE INTO journals VALUES (?,?)",
-                (item["id"], json.dumps(item)),
+                "INSERT INTO journals VALUES (?,?) ON CONFLICT(id) DO UPDATE SET payload=excluded.payload",
+                (note_id, json.dumps(item)),
             )
-        return jsonify(ok=True)
+        return jsonify(ok=True, journal=item)
 
     return app
 

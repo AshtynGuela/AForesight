@@ -112,3 +112,29 @@ test("photo framing survives reloads and stays separate from synced notes", () =
   assert.equal(clamped.y, 100);
   assert.equal(clamped.zoom, 3);
 });
+
+test("pending edits and deletes survive reloads and stale server responses", () => {
+  const storage = new Map();
+  const original = {
+    id: "field-note",
+    date: "2026-11-01",
+    note: "Original",
+    photo_id: "existing-photo",
+  };
+  const local = load("journal-store.js", "farmJournal", storage);
+  local.merge([original]);
+  const reloaded = load("journal-store.js", "farmJournal", storage);
+  const edit = { id: original.id, operation: "edit", note: "Edited details" };
+  const saved = reloaded.merge([original]);
+  assert.equal(reloaded.notes(saved, [edit])[0].note, edit.note);
+  assert.equal(reloaded.notes(saved, [edit])[0].photo_id, original.photo_id);
+  const deletion = { id: original.id, operation: "delete" };
+  assert.equal(reloaded.notes(saved, [edit, deletion]).length, 0);
+  reloaded.merge([
+    { ...original, note: edit.note, updated_at: "2026-11-07T00:00:00+00:00" },
+  ]);
+  assert.equal(reloaded.merge([original])[0].note, edit.note);
+  reloaded.merge([], [original.id]);
+  assert.equal(reloaded.merge([original]).length, 0);
+  assert.equal(reloaded.notes(saved, [edit]).length, 0);
+});

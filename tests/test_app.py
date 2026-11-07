@@ -100,6 +100,39 @@ class PrototypeTests(unittest.TestCase):
                 self.client.post("/api/climate", json=data).status_code, 400
             )
 
+    def test_journal_edit_preserves_details_and_delete_blocks_stale_sync(self):
+        entry = dict(
+            id="journal-edit-test",
+            date="2025-03-01",
+            crop="rice",
+            technique="Added fertilizer",
+            note="",
+            outcome="unobserved",
+            farm_context={"name": "Original farm"},
+        )
+        original = self.client.post("/api/journal", json=entry).json["journal"]
+        self.assertEqual(original["note"], "")
+        edit = dict(
+            entry,
+            operation="edit",
+            note="Rain began after application.\nCheck again tomorrow.",
+        )
+        edit["farm_context"] = {"name": "Different farm"}
+        saved = self.client.post("/api/journal", json=edit).json["journal"]
+        self.assertEqual(saved["note"], edit["note"])
+        self.assertEqual(saved["farm_context"], original["farm_context"])
+        self.assertEqual(saved["created_at"], original["created_at"])
+        self.client.post("/api/journal", json=entry)
+        self.assertEqual(self.client.get("/api/state").json["journals"], [saved])
+        delete = {"id": entry["id"], "operation": "delete"}
+        for retry in (delete, delete, entry, edit):
+            self.assertTrue(
+                self.client.post("/api/journal", json=retry).json["deleted"]
+            )
+        state = self.client.get("/api/state").json
+        self.assertEqual(state["journals"], [])
+        self.assertEqual(state["deleted_journal_ids"], [entry["id"]])
+
     def test_nasa_failure_does_not_replace_data(self):
         with patch("app.fetch_power", side_effect=requests.Timeout()):
             self.assertEqual(

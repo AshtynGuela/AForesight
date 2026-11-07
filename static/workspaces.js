@@ -79,7 +79,7 @@
   const noteLabel = form.elements.note.closest("label");
   const details = el("details", undefined, "wj-note-details");
   details.append(el("summary", "More detail (optional)"), noteLabel);
-  form.append(details);
+  upload.before(details);
   const saveButton = form.querySelector('button[type="submit"]');
   saveButton.textContent = "Save Note";
   const quick = el("section", undefined, "wj-quick");
@@ -101,6 +101,7 @@
   clear.append(img("refresh.svg"), el("span", "Clear Form"));
   clear.onclick = () => {
     form.reset();
+    details.open = false;
     form.elements.date.value = isoDay();
     form.elements.crop.value = state?.farm.crop || "rice";
     upload.querySelector("span").textContent = "Upload Photo";
@@ -112,7 +113,6 @@
   exportButton.textContent = "Export as JSON";
   exportButton.prepend(img("export.svg"));
   quick.append(clear, exportButton);
-  form.elements.note.setAttribute("form", form.id);
   journal.querySelector("h1").textContent = "Field Journal";
   journal.querySelector(".eyebrow").hidden = true;
   journal.querySelector(".lead").hidden = true;
@@ -126,7 +126,7 @@
   sync.textContent = "Sync when online";
   saved.append(sync);
   journal.querySelector(".section-heading").remove();
-  journal.append(form, saved, quick, details);
+  journal.append(form, saved, quick);
   const journalDraft = read("agriforesight-journal-draft-v1", {});
   for (const [key, value] of Object.entries(journalDraft))
     if (form.elements[key] && key !== "photo") form.elements[key].value = value;
@@ -153,3 +153,169 @@
       field.placeholder = state.farm.name;
   });
 })();
+
+function openJournalNote(note) {
+  const source = $("#journal-form").elements;
+  const dialog = el("dialog", undefined, "wj-photo-dialog wj-note-dialog");
+  const title = el("h2", "Field note");
+  title.id = "wj-note-title";
+  dialog.setAttribute("aria-labelledby", title.id);
+  const body = el("div", undefined, "wj-note-content");
+  const actions = el("div", undefined, "wj-note-actions");
+  const message = el("p", undefined, "wj-note-message");
+  message.setAttribute("role", "status");
+
+  function button(label, action, style = "secondary") {
+    const control = el("button", label, style);
+    control.type = "button";
+    control.onclick = action;
+    return control;
+  }
+
+  function saveChange(operation, changes = {}) {
+    const mutation_id = crypto.randomUUID();
+    try {
+      queueJournalChange({ ...changes, id: note.id, operation, mutation_id });
+    } catch {
+      message.textContent =
+        "Couldn’t save this change on your device. Free some space and try again.";
+      return;
+    }
+    dialog.close();
+    renderJournal();
+    const noteButtons = [
+      ...document.querySelectorAll("#journal-list .wj-note-open"),
+    ];
+    const focusTarget =
+      noteButtons.find((control) => control.dataset.noteId === note.id) ||
+      noteButtons[0] ||
+      $("#journal .wj-save-note");
+    focusTarget?.focus();
+    notice(
+      operation === "delete"
+        ? "Note deleted."
+        : "Changes saved on this device.",
+    );
+    if (navigator.onLine) sync();
+  }
+
+  function view() {
+    title.textContent = "Field note";
+    message.textContent = "";
+    const facts = el("dl", undefined, "wj-note-facts");
+    const crop =
+      [...source.crop.options].find((option) => option.value === note.crop)
+        ?.textContent || note.crop;
+    const outcome =
+      [...source.outcome.options].find(
+        (option) => option.value === note.outcome,
+      )?.textContent || note.outcome;
+    for (const [label, value] of [
+      ["Date", note.date],
+      ["Crop", crop],
+      ["Field / Plot", note.field || note.farm_context?.name || "Not recorded"],
+      ["Result", outcome],
+      [
+        "Harvest",
+        note.yield_kg == null || note.yield_kg === ""
+          ? "Not recorded"
+          : `${note.yield_kg} kg`,
+      ],
+    ])
+      facts.append(el("dt", label), el("dd", value));
+    body.replaceChildren(
+      facts,
+      el("h3", "What did you try?"),
+      el("p", journalAction(note), "wj-note-text"),
+      el("h3", "Field notes"),
+      el("p", note.note || "No extra details saved.", "wj-note-text"),
+    );
+    if (note.photo_id)
+      body.append(
+        button("View photo", () => journalPhotos.open(note.photo_id)),
+      );
+    actions.replaceChildren(
+      button("Close", () => dialog.close()),
+      button("Edit note", edit, ""),
+      button("Delete note", confirmDelete, "wj-note-delete"),
+    );
+    if (dialog.open) actions.firstElementChild.focus();
+  }
+
+  function edit() {
+    title.textContent = "Edit note";
+    const form = el("form", undefined, "wj-note-edit");
+    const saveButton = el("button", "Save changes");
+    saveButton.type = "submit";
+    for (const name of [
+      "date",
+      "crop",
+      "field",
+      "technique",
+      "outcome",
+      "yield_kg",
+      "note",
+    ]) {
+      const label = source[name].closest("label").cloneNode(true);
+      const control = label.querySelector("input, select, textarea");
+      control.removeAttribute("id");
+      control.value =
+        name === "technique" ? journalAction(note) : (note[name] ?? "");
+      if (name === "date") control.max = isoDay();
+      form.append(label);
+    }
+    form.append(saveButton);
+    form.onsubmit = (event) => {
+      event.preventDefault();
+      const changes = Object.fromEntries(new FormData(form));
+      if (!changes.technique.trim()) {
+        message.textContent = "Enter what you tried before saving.";
+        form.elements.technique.focus();
+        return;
+      }
+      const { farm_context, recorded_at, photo_id } = note;
+      const context =
+        farm_context &&
+        Object.fromEntries(
+          [
+            "name",
+            "municipality",
+            "latitude",
+            "longitude",
+            "crop_stage",
+            "planting_date",
+          ].map((key) => [key, farm_context[key]]),
+        );
+      saveChange("edit", {
+        ...changes,
+        farm_context: context,
+        recorded_at,
+        photo_id,
+      });
+    };
+    body.replaceChildren(form);
+    actions.replaceChildren(button("Cancel", view));
+    form.elements.technique.focus();
+  }
+
+  function confirmDelete() {
+    title.textContent = "Delete this note?";
+    body.replaceChildren(
+      el(
+        "p",
+        "This removes the note from Saved Notes and syncs the deletion when you’re online.",
+      ),
+    );
+    actions.replaceChildren(
+      button("Keep note", view),
+      button("Delete note", () => saveChange("delete"), "wj-note-delete"),
+    );
+    actions.firstElementChild.focus();
+  }
+
+  view();
+  dialog.append(title, body, message, actions);
+  dialog.addEventListener("close", () => dialog.remove(), { once: true });
+  document.body.append(dialog);
+  dialog.showModal();
+}

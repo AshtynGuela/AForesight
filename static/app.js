@@ -636,7 +636,10 @@ $("#history-variable").onchange = renderHistory;
 async function refresh() {
   state = await api("/api/state");
   try {
-    state.journals = farmJournal.merge(state.journals);
+    state.journals = farmJournal.merge(
+      state.journals,
+      state.deleted_journal_ids,
+    );
   } catch {
     notice("Device storage is full. Export your notes for a backup.", true);
   }
@@ -1260,25 +1263,24 @@ $("#simple-weather-dates").onclick = () => {
   $("#period-panel").open = true;
   $("#period-panel").scrollIntoView({ behavior: "smooth" });
 };
+function savedJournalNotes() {
+  return farmJournal.notes(
+    state?.journals ?? farmJournal.archived(),
+    read(QUEUE, []),
+  );
+}
+function journalAction(note) {
+  if (note.technique !== "Field note via assistant" || !note.note)
+    return note.technique;
+  const words = note.note.trim().replace(/\s+/g, " ");
+  return words.length <= 120 ? words : words.slice(0, 119).trimEnd() + "…";
+}
 function renderJournal() {
-  const pending = read(QUEUE, []),
-    saved = state?.journals || [];
-  $("#queue-status").textContent =
-    `${pending.length} pending on this device · ${saved.length} saved`;
+  const notes = savedJournalNotes();
   const list = $("#journal-list");
   list.replaceChildren();
-  const ids = new Set(saved.map((j) => j.id));
-  const notes = [
-    ...pending
-      .filter((j) => !ids.has(j.id))
-      .map((j) => ({ ...j, pending: true })),
-    ...saved.map((j) => ({
-      ...j,
-      pending: pending.some((p) => p.id === j.id),
-    })),
-  ];
   if (document.querySelector("#journal.workspace-panel")) {
-    const waiting = notes.filter((j) => j.pending).length;
+    const waiting = new Set(read(QUEUE, []).map((note) => note.id)).size;
     $("#queue-status").textContent =
       `${notes.length} saved ${notes.length === 1 ? "entry" : "entries"}` +
       (waiting ? ` · ${waiting} waiting to sync` : "");
@@ -1290,7 +1292,7 @@ function renderJournal() {
         j.date,
         j.crop,
         j.field || j.farm_context?.name || "—",
-        j.technique,
+        journalAction(j),
         {
           unobserved: "Too early to tell",
           better: "Good",
@@ -1312,7 +1314,24 @@ function renderJournal() {
     grid.querySelector("th").setAttribute("aria-label", "Field photo");
     const rows = table.querySelectorAll("tbody tr");
     notes.forEach((j, i) => {
-      const cells = rows[i].children;
+      const row = rows[i];
+      const cells = row.children;
+      const openNote = el("button", cells[4].textContent, "wj-note-open");
+      openNote.type = "button";
+      openNote.dataset.noteId = j.id;
+      openNote.setAttribute(
+        "aria-label",
+        `Open note from ${j.date}: ${openNote.textContent}`,
+      );
+      openNote.onclick = () => openJournalNote(j);
+      cells[4].replaceChildren(openNote);
+      row.onclick = (event) => {
+        if (
+          !event.target.closest("button") &&
+          !window.getSelection()?.toString()
+        )
+          openNote.click();
+      };
       const dateParts = /^(\d{4})-(\d{2})-(\d{2})$/.exec(j.date);
       if (dateParts) {
         const time = el(
@@ -1386,22 +1405,41 @@ function renderJournal() {
 async function sync() {
   if (syncing) return;
   syncing = true;
+  let synced = false;
   try {
-    for (const item of read(QUEUE, [])) {
-      await api("/api/journal", item);
+    let item = read(QUEUE, [])[0];
+    const changed = Boolean(item);
+    while (item) {
+      const result = await api("/api/journal", item);
+      const { operation, mutation_id, ...note } = item;
+      if (operation && !result.journal && !result.deleted)
+        throw new Error("Restart the app server to sync edits and deletions.");
+      const saved = result.deleted
+        ? farmJournal.merge([], [item.id])
+        : farmJournal.merge([{ ...note, ...result.journal }]);
+      if (state) state.journals = saved;
       save(
         QUEUE,
-        read(QUEUE, []).filter((j) => j.id !== item.id),
+        read(QUEUE, []).filter(
+          (j) => (j.mutation_id || j.id) !== (mutation_id || item.id),
+        ),
       );
+      item = read(QUEUE, [])[0];
     }
     await refresh();
-    notice("Notes synced.");
+    synced = true;
+    if (changed && document.body.dataset.page === "journal")
+      notice("Notes synced.");
   } catch (e) {
     renderJournal();
     notice("Your notes are still saved here: " + e.message, true);
   } finally {
     syncing = false;
+    if (synced && navigator.onLine && read(QUEUE, []).length) void sync();
   }
+}
+function queueJournalChange(item) {
+  save(QUEUE, [...read(QUEUE, []), item]);
 }
 $("#journal-form").onsubmit = async (e) => {
   e.preventDefault();
@@ -1428,7 +1466,6 @@ $("#journal-form").onsubmit = async (e) => {
         }
       : null,
   };
-  item.note = item.note || item.technique;
   try {
     const photo = $("#journal-photo")?.files[0];
     if (photo) {
@@ -1441,7 +1478,7 @@ $("#journal-form").onsubmit = async (e) => {
       farmJournal.preview(item.id, journalPhotos.draftPreview());
       item.photo_id = item.id;
     }
-    save(QUEUE, [...read(QUEUE, []), item]);
+    queueJournalChange(item);
     let archiveWarning = "";
     try {
       farmJournal.merge([item]);
@@ -1471,9 +1508,21 @@ $("#journal-form").onsubmit = async (e) => {
 $("#sync").onclick = sync;
 $("#export").onclick = () => {
   const url = URL.createObjectURL(
-    new Blob([JSON.stringify({ state, pending: read(QUEUE, []) }, null, 2)], {
-      type: "application/json",
-    }),
+    new Blob(
+      [
+        JSON.stringify(
+          {
+            state: { ...state, journals: savedJournalNotes() },
+            pending: read(QUEUE, []),
+          },
+          null,
+          2,
+        ),
+      ],
+      {
+        type: "application/json",
+      },
+    ),
   );
   const a = el("a");
   a.href = url;
@@ -1598,6 +1647,14 @@ async function start() {
     state = read(CACHE, null);
     connected(false);
     if (state) {
+      try {
+        state.journals = farmJournal.merge(
+          state.journals,
+          state.deleted_journal_ids,
+        );
+      } catch {
+        /* Keep cached notes available even when browser storage is full. */
+      }
       state.climate = farmHistory.preferCached(state.farm, state.climate);
       if (state.internal?.demo) state.internal = null;
       if (state.analysis?.internal?.demo) state.analysis = null;

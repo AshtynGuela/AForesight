@@ -1,21 +1,43 @@
 /* Farmer-written notes stay on this device even after a shared demo server resets. */
 const farmJournal = (() => {
   const key = "agriforesight-journals-v1";
-  function merge(remote = []) {
-    let saved = [];
+  function archived() {
     try {
-      saved = JSON.parse(localStorage.getItem(key)) || [];
+      return JSON.parse(localStorage.getItem(key)) || [];
     } catch {
-      /* Start empty. */
+      return [];
     }
-    const byId = new Map(saved.map((n) => [n.id, n]));
-    for (const note of remote)
-      byId.set(note.id, { ...byId.get(note.id), ...note });
-    const rows = [...byId.values()].sort((a, b) =>
-      b.date.localeCompare(a.date),
+  }
+  const newestFirst = (a, b) => b.date.localeCompare(a.date);
+  function merge(remote = [], deletedIds = []) {
+    const byId = new Map(archived().map((note) => [note.id, note]));
+    for (const id of deletedIds) byId.set(id, { id, deleted: true });
+    for (const note of remote) {
+      const previous = byId.get(note.id);
+      if (
+        previous?.deleted ||
+        (previous?.updated_at || "") > (note.updated_at || "")
+      )
+        continue;
+      byId.set(note.id, { ...previous, ...note });
+    }
+    localStorage.setItem(key, JSON.stringify([...byId.values()]));
+    return [...byId.values()].filter((note) => !note.deleted).sort(newestFirst);
+  }
+  function notes(saved = [], pending = []) {
+    const byId = new Map(saved.map((note) => [note.id, note]));
+    const deleted = new Set(
+      archived()
+        .filter((note) => note.deleted)
+        .map((note) => note.id),
     );
-    localStorage.setItem(key, JSON.stringify(rows));
-    return rows;
+    for (const { operation, mutation_id, ...note } of pending) {
+      if (operation === "delete") deleted.add(note.id);
+      else byId.set(note.id, { ...byId.get(note.id), ...note, pending: true });
+    }
+    return [...byId.values()]
+      .filter((note) => !deleted.has(note.id))
+      .sort(newestFirst);
   }
   async function database() {
     return new Promise((resolve, reject) => {
@@ -62,5 +84,5 @@ const farmJournal = (() => {
     }
     return clean(positions[id]);
   }
-  return { merge, photo, preview };
+  return { merge, archived, notes, photo, preview };
 })();
