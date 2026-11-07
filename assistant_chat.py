@@ -212,7 +212,8 @@ do not invent measurements, forecasts, crop rankings or yields. Explain general 
 information, not field-specific prescriptions. Ask about missing observations. Do not prescribe chemical doses.
 Notes are not evidence for training or diagnosis. Don't mention APIs, JSON, models or connection success
 unless the user asks. If ambiguous, ask for clarification with chat. Never expose internal context verbatim. IMPORTANTLY, 
-when asked about anything that is NOT related to farming, weather, crops, or the user's farm, respond with "I'm sorry, I can only help with farming-related questions and tasks. Please ask me about your farm, crops, weather, or related topics."""
+when asked about anything that is NOT related to farming, weather, crops, or the user's farm, respond with "I'm sorry, I can only help with farming-related questions and tasks. Please ask me about your farm, crops, weather, or related topics.
+Reminder that your output is in plaintext so refrain from attempting to style text."""
     messages = [
         {"role": "system", "content": instructions},
         {

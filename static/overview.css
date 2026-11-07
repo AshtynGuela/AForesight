@@ -48,7 +48,8 @@ body[data-page="overview"] .layout {
   min-height: 100vh;
   isolation: isolate;
   position: relative;
-  overflow: hidden;
+  /* Clip the background without trapping the sticky navigation in a scroller. */
+  overflow: clip;
 }
 body[data-page="overview"] .layout:before {
   content: "";

@@ -95,3 +95,20 @@ test("sync retries merge by note id instead of duplicating local records", () =>
   store.merge([note]);
   assert.equal(store.merge([]).length, 1);
 });
+
+test("photo framing survives reloads and stays separate from synced notes", () => {
+  const storage = new Map();
+  const store = load("journal-store.js", "farmJournal", storage);
+  store.preview("device-photo", { x: 20, y: 80, zoom: 2 });
+  const reloaded = load("journal-store.js", "farmJournal", storage);
+  const position = reloaded.preview("device-photo");
+  assert.equal(position.x, 20);
+  assert.equal(position.y, 80);
+  assert.equal(position.zoom, 2);
+  assert.equal(reloaded.merge([]).length, 0);
+  assert.equal(reloaded.preview("other-photo").zoom, 1);
+  const clamped = reloaded.preview("device-photo", { x: -10, y: 150, zoom: 9 });
+  assert.equal(clamped.x, 0);
+  assert.equal(clamped.y, 100);
+  assert.equal(clamped.zoom, 3);
+});

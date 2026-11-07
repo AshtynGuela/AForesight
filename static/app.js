@@ -36,9 +36,16 @@ function registerPageView(id, renderView) {
 function renderActivePage() {
   pageViews.get(document.body.dataset.page)?.();
 }
+const noticeAnchor = document.createComment("Shared status message");
+$("#notice").before(noticeAnchor);
 function notice(text, error = false) {
-  $("#notice").textContent = text;
-  $("#notice").classList.toggle("error", error);
+  const banner = $("#notice");
+  const journal = document.querySelector("#journal.workspace-panel");
+  if (document.body.dataset.page === "journal" && journal)
+    journal.prepend(banner);
+  else noticeAnchor.after(banner);
+  banner.textContent = text;
+  banner.classList.toggle("error", error);
 }
 function syncAssistantLauncher() {
   const farmPage = $("#farm");
@@ -1339,9 +1346,19 @@ function renderJournal() {
             img.className = "wj-note-photo";
             const url = URL.createObjectURL(file);
             img.src = url;
-            img.alt = "Your field photo";
+            img.alt = "";
+            const crop = farmJournal.preview(j.photo_id);
+            journalPhotos.frame(img, crop);
             img.onload = () => URL.revokeObjectURL(url);
-            rows[i].firstChild.append(img);
+            const view = el("button", undefined, "wj-photo-button");
+            view.type = "button";
+            view.setAttribute(
+              "aria-label",
+              `View field photo from ${j.date} and adjust preview`,
+            );
+            view.append(img);
+            view.onclick = () => journalPhotos.open(j.photo_id);
+            rows[i].firstChild.append(view);
           })
           .catch(() => {});
     });
@@ -1421,6 +1438,7 @@ $("#journal-form").onsubmit = async (e) => {
       )
         throw new Error("Choose a JPG, PNG or WebP photo up to 2 MB.");
       await farmJournal.photo(item.id, photo);
+      farmJournal.preview(item.id, journalPhotos.draftPreview());
       item.photo_id = item.id;
     }
     save(QUEUE, [...read(QUEUE, []), item]);
@@ -1435,6 +1453,7 @@ $("#journal-form").onsubmit = async (e) => {
     f.elements.note.value = "";
     f.elements.technique.value = "";
     if ($("#journal-photo")) $("#journal-photo").value = "";
+    f.dispatchEvent(new Event("journal-saved"));
     renderJournal();
     notice("Note saved here." + archiveWarning);
     if (navigator.onLine) sync();

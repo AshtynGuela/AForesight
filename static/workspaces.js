@@ -67,6 +67,15 @@
   fieldLabel.append(field);
   grid.append(fieldLabel);
   form.append(upload);
+  const previewButton = el(
+    "button",
+    "Choose photo preview",
+    "wj-preview-button secondary",
+  );
+  previewButton.type = "button";
+  previewButton.hidden = true;
+  previewButton.onclick = () => journalPhotos.choose(photo.files[0]);
+  form.append(previewButton);
   const noteLabel = form.elements.note.closest("label");
   const details = el("details", undefined, "wj-note-details");
   details.append(el("summary", "More detail (optional)"), noteLabel);
@@ -85,6 +94,8 @@
   quick.append(quickTitle);
   saveButton.prepend(img("save.svg"));
   saveButton.setAttribute("form", form.id);
+  saveButton.classList.add("wj-save-note");
+  form.append(saveButton);
   const clear = el("button", undefined, "secondary");
   clear.type = "button";
   clear.append(img("refresh.svg"), el("span", "Clear Form"));
@@ -93,12 +104,14 @@
     form.elements.date.value = isoDay();
     form.elements.crop.value = state?.farm.crop || "rice";
     upload.querySelector("span").textContent = "Upload Photo";
+    previewButton.hidden = true;
+    journalPhotos.reset();
     localStorage.removeItem("agriforesight-journal-draft-v1");
   };
   const exportButton = $("#export");
   exportButton.textContent = "Export as JSON";
   exportButton.prepend(img("export.svg"));
-  quick.append(saveButton, clear, exportButton);
+  quick.append(clear, exportButton);
   form.elements.note.setAttribute("form", form.id);
   journal.querySelector("h1").textContent = "Field Journal";
   journal.querySelector(".eyebrow").hidden = true;
@@ -124,9 +137,16 @@
     );
   });
   photo.onchange = () => {
+    journalPhotos.reset();
+    previewButton.hidden = !photo.files.length;
     upload.querySelector("span").textContent =
       photo.files[0]?.name || "Upload Photo";
   };
+  form.addEventListener("journal-saved", () => {
+    upload.querySelector("span").textContent = "Upload Photo";
+    previewButton.hidden = true;
+    journalPhotos.reset();
+  });
   registerPageView("journal", () => {
     renderJournal();
     if (!form.elements.field.value && state)

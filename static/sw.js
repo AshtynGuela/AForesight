@@ -1,5 +1,6 @@
-const CACHE = "agriforesight-shell-v44-saved-notes";
+const CACHE = "agriforesight-shell-v45-journal-photos";
 const FILES = [
+  "/static/journal-photos.js",
   "/static/journal-assets/result-good.svg",
   "/static/journal-assets/result-fair.svg",
   "/static/workspaces.js",
