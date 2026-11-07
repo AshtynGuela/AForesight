@@ -536,6 +536,14 @@ body:is([data-page="planting"], [data-page="journal"]) #offline:not([hidden]) {
   margin: 16px 0 4px;
   font-size: 15px;
 }
+.wj-note-content > .wj-photo-original {
+  height: auto;
+  max-height: min(48dvh, 440px);
+  margin: 0 0 16px;
+}
+.wj-note-content > .wj-photo-original[hidden] {
+  display: none;
+}
 .wj-note-facts {
   display: grid;
   grid-template-columns: max-content minmax(0, 1fr);

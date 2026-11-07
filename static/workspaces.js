@@ -159,11 +159,24 @@ function openJournalNote(note) {
   const dialog = el("dialog", undefined, "wj-photo-dialog wj-note-dialog");
   const title = el("h2", "Field note");
   title.id = "wj-note-title";
+  title.tabIndex = -1;
+  title.autofocus = true;
   dialog.setAttribute("aria-labelledby", title.id);
   const body = el("div", undefined, "wj-note-content");
   const actions = el("div", undefined, "wj-note-actions");
   const message = el("p", undefined, "wj-note-message");
   message.setAttribute("role", "status");
+  const photo = note.photo_id
+    ? el("img", undefined, "wj-photo-original")
+    : null;
+  let photoUrl;
+  if (photo) {
+    photo.alt = "Photo attached to this field note";
+    photo.hidden = true;
+    photo.onload = () => {
+      photo.hidden = false;
+    };
+  }
 
   function button(label, action, style = "secondary") {
     const control = el("button", label, style);
@@ -230,16 +243,16 @@ function openJournalNote(note) {
       el("h3", "Field notes"),
       el("p", note.note || "No extra details saved.", "wj-note-text"),
     );
-    if (note.photo_id)
-      body.append(
-        button("View photo", () => journalPhotos.open(note.photo_id)),
-      );
+    if (photo) body.prepend(photo);
     actions.replaceChildren(
       button("Close", () => dialog.close()),
       button("Edit note", edit, ""),
       button("Delete note", confirmDelete, "wj-note-delete"),
     );
-    if (dialog.open) actions.firstElementChild.focus();
+    if (dialog.open) {
+      dialog.scrollTop = 0;
+      title.focus({ preventScroll: true });
+    }
   }
 
   function edit() {
@@ -315,7 +328,26 @@ function openJournalNote(note) {
 
   view();
   dialog.append(title, body, message, actions);
-  dialog.addEventListener("close", () => dialog.remove(), { once: true });
+  dialog.addEventListener(
+    "close",
+    () => {
+      if (photoUrl) URL.revokeObjectURL(photoUrl);
+      dialog.remove();
+    },
+    { once: true },
+  );
   document.body.append(dialog);
   dialog.showModal();
+  if (photo) {
+    farmJournal
+      .photo(note.photo_id)
+      .then((file) => {
+        if (!file || !dialog.open) return;
+        photoUrl = URL.createObjectURL(file);
+        photo.src = photoUrl;
+      })
+      .catch(() => {
+        /* Keep the note readable if the local photo is unavailable. */
+      });
+  }
 }
