@@ -15,6 +15,9 @@ function setup() {
         children: [],
         style: {},
         events: {},
+        classList: { add() {}, remove() {} },
+        naturalWidth: 408,
+        naturalHeight: 176,
       });
     }
     append(...children) {
@@ -24,6 +27,18 @@ function setup() {
       }
     }
     setAttribute() {}
+    set textContent(text) {
+      this.text = text;
+    }
+    replaceChildren(...children) {
+      this.children = [];
+      this.append(...children);
+    }
+    getBoundingClientRect() {
+      return { left: 0, top: 0, width: 204, height: 176 };
+    }
+    setPointerCapture() {}
+    focus() {}
     addEventListener(name, fn) {
       this.events[name] = fn;
     }
@@ -90,16 +105,28 @@ function setup() {
 
 test("original photo stays unchanged while the chosen thumbnail framing is saved", async () => {
   const s = setup();
-  await s.photos.open("existing-photo");
+  const savedThumbnail = { style: {}, isConnected: true };
+  await s.photos.open("existing-photo", savedThumbnail);
   const full = s.find((n) => n.className === "wj-photo-original");
   assert.equal(full.src, "blob:isolated-test");
   assert.deepEqual(full.style, {});
-  const slider = s.find((n) => n.tag === "input" && n.max === 3);
-  slider.value = "2";
-  slider.oninput();
-  s.find((n) => n.text === "Use this preview").onclick();
+  assert.equal(
+    s.find((n) => n.className === "wj-photo-frame"),
+    undefined,
+  );
+  s.find((n) => n.text === "Edit preview").onclick();
+  const crop = s.find((n) => n.className === "wj-photo-frame");
+  crop.events.wheel({
+    clientX: 102,
+    clientY: 88,
+    deltaY: -Math.log(2) * 400,
+    deltaMode: 0,
+    preventDefault() {},
+  });
+  s.find((n) => n.text === "Done").onclick();
   assert.equal(s.positions.get("existing-photo").zoom, 2);
-  assert.equal(s.renders(), 1);
+  assert.equal(savedThumbnail.style.transform, "scale(2)");
+  assert.equal(s.renders(), 0);
   assert.equal(s.original.size, 100);
   assert.equal(s.body.children.length, 0);
   assert.deepEqual(s.revoked, ["blob:isolated-test"]);
@@ -108,18 +135,30 @@ test("original photo stays unchanged while the chosen thumbnail framing is saved
 test("closing a draft preview discards changes; applying it keeps framing until reset", () => {
   const s = setup();
   const adjust = () => {
-    const slider = s.find((n) => n.tag === "input" && n.max === 3);
-    slider.value = "2.5";
-    slider.oninput();
+    const crop = s.find((n) => n.className === "wj-photo-frame");
+    const pointer = (pointerId, clientX) => ({
+      pointerId,
+      clientX,
+      clientY: 88,
+      button: 0,
+    });
+    crop.events.pointerdown(pointer(1, 82));
+    crop.events.pointerdown(pointer(2, 122));
+    crop.events.pointermove(pointer(2, 162));
+    assert.equal(crop.children[0].style.transform, "scale(2)");
+    crop.events.pointerup(pointer(2, 162));
+    const beforeDrag = crop.children[0].style.objectPosition;
+    crop.events.pointermove(pointer(1, 102));
+    assert.notEqual(crop.children[0].style.objectPosition, beforeDrag);
   };
   s.photos.choose(s.original);
   adjust();
-  s.find((n) => n.text === "Close").onclick();
+  s.find((n) => n.text === "Cancel").onclick();
   assert.equal(s.photos.draftPreview().zoom, 1);
   s.photos.choose(s.original);
   adjust();
-  s.find((n) => n.text === "Use this preview").onclick();
-  assert.equal(s.photos.draftPreview().zoom, 2.5);
+  s.find((n) => n.text === "Done").onclick();
+  assert.equal(s.photos.draftPreview().zoom, 2);
   assert.equal(s.positions.size, 0);
   s.photos.reset();
   assert.equal(s.photos.draftPreview().zoom, 1);

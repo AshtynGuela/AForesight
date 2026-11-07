@@ -278,6 +278,9 @@ body:is([data-page="planting"], [data-page="journal"]) #offline:not([hidden]) {
   min-height: 293px;
   padding: 10px;
   color: #333;
+  box-shadow:
+    inset 0 1px 2px #00000026,
+    0 1px 0 #ffffff40;
 }
 #journal .wj-saved-heading {
   display: flex;
@@ -345,6 +348,7 @@ body:is([data-page="planting"], [data-page="journal"]) #offline:not([hidden]) {
 }
 #journal .wj-notes-table td:not(:first-child) {
   padding-right: 5px;
+  vertical-align: middle;
 }
 #journal .wj-notes-table time {
   white-space: nowrap;
@@ -354,7 +358,6 @@ body:is([data-page="planting"], [data-page="journal"]) #offline:not([hidden]) {
   width: 51px;
   height: 44px;
   object-fit: cover;
-  border-radius: 15px;
 }
 #journal .wj-photo-button {
   display: block;
@@ -373,18 +376,19 @@ body:is([data-page="planting"], [data-page="journal"]) #offline:not([hidden]) {
 }
 #journal .wj-result {
   display: inline-flex;
-  align-items: flex-start;
+  align-items: center;
   gap: 2px;
+  font-weight: 500;
 }
 #journal .wj-result img {
   display: block;
   flex-shrink: 0;
 }
 #journal .wj-result[data-outcome="better"] {
-  color: #007637;
+  color: #11ae38;
 }
 #journal .wj-result:is([data-outcome="same"], [data-outcome="worse"]) {
-  color: #b57a00;
+  color: #eaa819;
 }
 #journal .wj-saved-empty {
   margin: 18px 0 0;
@@ -456,8 +460,7 @@ body:is([data-page="planting"], [data-page="journal"]) #offline:not([hidden]) {
   margin: 0;
   font-size: 20px;
 }
-.wj-photo-heading button,
-.wj-photo-editor button {
+.wj-photo-dialog button {
   min-height: 44px;
 }
 .wj-photo-original {
@@ -469,45 +472,41 @@ body:is([data-page="planting"], [data-page="journal"]) #offline:not([hidden]) {
   background: #0001;
   border-radius: 12px;
 }
-.wj-photo-editor h3 {
-  margin: 0;
-  font-size: 16px;
-}
-.wj-photo-editor p {
-  margin: 6px 0 14px;
-  font-size: 13px;
+.wj-crop-dialog {
+  width: min(390px, calc(100vw - 24px));
 }
 .wj-photo-frame {
-  float: left;
-  width: 153px;
-  height: 132px;
+  width: min(100%, 42dvh);
+  aspect-ratio: 51 / 44;
   overflow: hidden;
   border-radius: 15px;
-  margin: 0 20px 16px 0;
+  margin: 14px auto 0;
+  background: #0001;
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+}
+.wj-photo-frame:active {
+  cursor: grabbing;
+}
+.wj-photo-frame:focus-visible {
+  outline: 2px solid #22633a;
+  outline-offset: 3px;
 }
 .wj-photo-frame img {
   display: block;
   width: 100%;
   height: 100%;
   object-fit: cover;
+  pointer-events: none;
 }
-.wj-photo-controls {
-  overflow: hidden;
-}
-.wj-photo-controls label {
+.wj-crop-hint {
+  margin: 12px 0;
   font-size: 13px;
-  margin: 0;
+  text-align: center;
 }
-.wj-photo-controls input {
+.wj-crop-done {
   width: 100%;
-  min-height: 32px;
-  margin: 0;
-  padding: 0;
-  box-shadow: none;
-}
-.wj-photo-editor > button {
-  display: block;
-  clear: both;
 }
 @media (max-width: 800px) {
   body:is([data-page="planting"], [data-page="journal"])::before {
@@ -549,11 +548,6 @@ body:is([data-page="planting"], [data-page="journal"]) #offline:not([hidden]) {
   }
   .wj-photo-dialog {
     padding: 16px;
-  }
-  .wj-photo-frame {
-    width: 102px;
-    height: 88px;
-    margin-right: 12px;
   }
   #planting .cp-choice {
     margin-right: 0;

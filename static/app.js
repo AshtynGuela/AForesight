@@ -1291,14 +1291,12 @@ function renderJournal() {
         j.crop,
         j.field || j.farm_context?.name || "—",
         j.technique,
-        j.pending
-          ? "Waiting to sync"
-          : {
-              unobserved: "Too early to tell",
-              better: "Better",
-              same: "As expected",
-              worse: "Worse",
-            }[j.outcome] || j.outcome,
+        {
+          unobserved: "Too early to tell",
+          better: "Good",
+          same: "Fair",
+          worse: "Worse",
+        }[j.outcome] || j.outcome,
       ]),
     );
     const grid = table.querySelector("table");
@@ -1326,8 +1324,10 @@ function renderJournal() {
       }
       cells[2].textContent = j.crop[0].toUpperCase() + j.crop.slice(1);
       const badge = el("span", undefined, "wj-result");
-      badge.dataset.outcome = j.pending ? "pending" : j.outcome;
-      if (!j.pending && ["better", "same", "worse"].includes(j.outcome)) {
+      badge.dataset.outcome = j.outcome;
+      if (j.outcome === "better") badge.title = "Better than expected";
+      if (j.outcome === "same") badge.title = "As expected";
+      if (["better", "same", "worse"].includes(j.outcome)) {
         const icon = el("img");
         icon.src =
           "/static/journal-assets/" +
@@ -1345,11 +1345,11 @@ function renderJournal() {
             const img = el("img");
             img.className = "wj-note-photo";
             const url = URL.createObjectURL(file);
-            img.src = url;
             img.alt = "";
             const crop = farmJournal.preview(j.photo_id);
             journalPhotos.frame(img, crop);
-            img.onload = () => URL.revokeObjectURL(url);
+            img.onload = img.onerror = () => URL.revokeObjectURL(url);
+            img.src = url;
             const view = el("button", undefined, "wj-photo-button");
             view.type = "button";
             view.setAttribute(
@@ -1357,7 +1357,7 @@ function renderJournal() {
               `View field photo from ${j.date} and adjust preview`,
             );
             view.append(img);
-            view.onclick = () => journalPhotos.open(j.photo_id);
+            view.onclick = () => journalPhotos.open(j.photo_id, img);
             rows[i].firstChild.append(view);
           })
           .catch(() => {});
