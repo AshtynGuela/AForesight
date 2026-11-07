@@ -25,6 +25,9 @@ const assessFarm = (() => {
   return (state, now = Date.now()) => {
     const farm = state.farm;
     const today = new Date(now + 28800000).toISOString().slice(0, 10);
+    const tomorrow = new Date(Date.parse(today) + 86400000)
+      .toISOString()
+      .slice(0, 10);
     const end = new Date(Date.parse(today) + 6 * 86400000)
       .toISOString()
       .slice(0, 10);
@@ -63,16 +66,21 @@ const assessFarm = (() => {
     const highs = temperatures.map((d) => d.high);
     if (usableCurrent && valid(current.temperature, -60, 65))
       highs.push(current.temperature);
+    const heatDay = temperatures.find((d) => d.high >= policy.heatC);
+    const heavyDay = rain.find((d) => d.rain >= policy.heavyRainMm);
     const hot = highs.some((v) => v >= policy.heatC);
-    const heavy = rain.some((d) => d.rain >= policy.heavyRainMm);
+    const heavy = Boolean(heavyDay);
     let streak = 0,
       longest = 0,
-      previous;
-    for (const d of rain) {
+      previous,
+      dryStart;
+    for (const [index, d] of rain.entries()) {
       if (previous && Date.parse(d.date) - Date.parse(previous) !== 86400000)
         streak = 0;
       streak = d.rain < policy.dryRainMm ? streak + 1 : 0;
       longest = Math.max(longest, streak);
+      if (!dryStart && streak === policy.dryDays)
+        dryStart = rain[index - policy.dryDays + 1].date;
       previous = d.date;
     }
     const etReady = rainReady && days.every((d) => valid(d.et0, 0, 30));
@@ -180,6 +188,17 @@ const assessFarm = (() => {
     const okay = checks.every((c) => c.status === "okay");
     return {
       checks,
+      forecastEvents: [
+        heavyDay && { id: "rain", date: heavyDay.date, value: heavyDay.rain },
+        heatDay && { id: "heat", date: heatDay.date, value: heatDay.high },
+        dryStart && { id: "water", date: dryStart, value: policy.dryDays },
+      ].filter(Boolean),
+      hasNearTermForecast: days.some(
+        (d) =>
+          d.date <= tomorrow &&
+          valid(d.rain, 0, 3000) &&
+          valid(d.high, -60, 65),
+      ),
       ready,
       status: flagged ? "attention" : okay ? "okay" : "unknown",
       badge: flagged ? "Watch" : okay ? "Good" : "—",

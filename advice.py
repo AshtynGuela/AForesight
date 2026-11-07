@@ -35,7 +35,9 @@ SOURCES = {
 }
 
 
-def suggested_actions(farm, forecast, *, allow_past=False, label=None):
+def suggested_actions(
+    farm, forecast, *, allow_past=False, label=None, include_weather=True
+):
     actions = []
 
     def add(
@@ -60,7 +62,7 @@ def suggested_actions(farm, forecast, *, allow_past=False, label=None):
         )
 
     usable = []
-    if forecast and not forecast.get("demo"):
+    if include_weather and forecast and not forecast.get("demo"):
         try:
             age = (
                 datetime.now(timezone.utc)
@@ -74,7 +76,7 @@ def suggested_actions(farm, forecast, *, allow_past=False, label=None):
                     usable = forecast["days"]
         except (ValueError, KeyError, TypeError):
             pass
-    if not usable:
+    if not usable and include_weather:
         add(
             "Get the latest weather",
             "Update the weather before planning work that depends on rain.",
@@ -83,7 +85,7 @@ def suggested_actions(farm, forecast, *, allow_past=False, label=None):
             "weather",
             basis="The weather needs updating. This doesn’t mean something is wrong in the field.",
         )
-    else:
+    elif usable:
         usable = sorted(usable, key=lambda d: d["date"])
         rain = [d for d in usable if isinstance(d.get("rain"), (int, float))]
         dry = []
@@ -244,6 +246,28 @@ def suggested_actions(farm, forecast, *, allow_past=False, label=None):
             action["context"] = (
                 "Looking back or trying a plan? This uses your saved crop stage, not the stage from those past dates. It isn’t a current alert."
             )
+    if not include_weather:
+        irrigated = farm["water"] == "irrigated"
+        add(
+            "Check where your water goes"
+            if irrigated
+            else "Check moisture near the roots",
+            "Look for leaks and see whether water reaches the far end of the field."
+            if irrigated
+            else "Check the soil near the roots in a few spots before deciding whether to water.",
+            "You recorded an irrigated field. Water can reach different parts of it unevenly."
+            if irrigated
+            else "You recorded a rainfed field. Checking near the roots helps you see how much moisture is still available.",
+            "On your next field visit",
+            "balance",
+        )
+        add(
+            "Walk a few parts of your field",
+            "Check your plants and write down anything that has changed since your last visit.",
+            "Comparing notes between visits can help you spot changes in the field.",
+            "On your next field visit",
+            "rice_growth" if farm["crop"] == "rice" else "soil",
+        )
     if not actions:
         add(
             "Have a look around the field first",

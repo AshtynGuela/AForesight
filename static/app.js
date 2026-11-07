@@ -157,6 +157,7 @@ async function api(path, data) {
     if (samePoint(farm, state.farm)) {
       state.forecast = result.forecast;
       state.forecast_status = result.warning || "";
+      document.dispatchEvent(new Event("farm-forecast-updated"));
       try {
         save(CACHE, state);
       } catch {

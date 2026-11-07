@@ -30,6 +30,13 @@ const forecast = {
 };
 const assess = (changes = {}) =>
   context.assess({ farm, forecast, ...changes }, now);
+vm.runInContext(
+  fs.readFileSync(
+    require("node:path").join(__dirname, "../static/dashboard-tips.js"),
+    "utf8",
+  ) + ";globalThis.tips=dashboardTips;",
+  context,
+);
 test("provider weather can clear all checks without manual soil data", () => {
   const r = assess();
   assert.equal(r.badge, "Good");
@@ -136,5 +143,49 @@ test("manual soil values do not alter the weather outlook; irrigated fields avoi
       },
     }).checks[1].available,
     false,
+  );
+});
+
+test("dashboard daily tips rotate at Manila midnight even without weather", () => {
+  const farm_tips = [{ title: "Walk the field" }, { title: "Check water" }];
+  const state = { farm, farm_tips };
+  const midnight = Date.parse("2026-11-07T16:00:00Z");
+  const before = context.tips(state, midnight - 1);
+  const after = context.tips(state, midnight);
+  assert.notEqual(before.tips[0].title, after.tips[0].title);
+  assert.equal(after.needsWeather, true);
+  assert.equal(
+    context.tips(state, midnight + 60_000).tips[0].title,
+    after.tips[0].title,
+  );
+});
+
+test("near-term weather comes first, with a dated reason, only for a fresh forecast at this field", () => {
+  const farm_tips = [{ title: "Walk the field" }];
+  const rainy = {
+    ...forecast,
+    days: forecast.days.map((day, i) => ({ ...day, rain: i === 1 ? 55 : 8 })),
+  };
+  const urgent = context.tips({ farm, forecast: rainy, farm_tips }, now);
+  assert.equal(urgent.tips[0].title, "Heavy rain ahead");
+  assert.match(urgent.tips[0].why, /Open-Meteo.*55\.0 mm.*Nov 8/);
+  assert.equal(urgent.tips[1].title, "Walk the field");
+  assert.equal(urgent.needsWeather, false);
+  for (const unusable of [
+    { ...rainy, retrieved_at: new Date(now - 49 * 3600000).toISOString() },
+    { ...rainy, latitude: 14 },
+    { ...rainy, demo: true },
+  ]) {
+    const tips = context.tips({ farm, forecast: unusable, farm_tips }, now);
+    assert.equal(tips.tips[0].title, "Walk the field");
+    assert.equal(tips.needsWeather, true);
+  }
+  const later = {
+    ...rainy,
+    days: forecast.days.map((day, i) => ({ ...day, rain: i === 4 ? 55 : 8 })),
+  };
+  assert.equal(
+    context.tips({ farm, forecast: later, farm_tips }, now).tips[0].title,
+    "Walk the field",
   );
 });

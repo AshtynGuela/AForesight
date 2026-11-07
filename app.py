@@ -445,6 +445,7 @@ def create_app(database=None):
             farm=farm,
             climate=climate,
             weather_actions=suggested_actions(farm, forecast),
+            farm_tips=suggested_actions(farm, None, include_weather=False),
             analysis_period=period,
             analysis=analysis,
             journals=journals,

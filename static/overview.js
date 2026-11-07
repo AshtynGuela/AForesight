@@ -91,15 +91,99 @@
   const tip = el("div", undefined, "ov-tip");
   const tipCopy = el("div", undefined, "ov-tip-copy");
   tipCopy.append(el("h2", "A suggestion for your farm"));
-  const tipText = el("p");
+  const tipText = el("p", "Loading your farm tip…");
   tipText.id = "ov-tip-text";
-  tipCopy.append(tipText);
+  tipText.setAttribute("aria-live", "polite");
+  const tipWhen = el("small", undefined, "ov-tip-when");
+  tipCopy.append(tipText, tipWhen);
   const details = el("button", "See details", "secondary");
+  details.hidden = true;
+  const nextTip = el("button", "Next tip", "secondary");
+  nextTip.hidden = true;
+  const tipButtons = el("div", undefined, "ov-tip-buttons");
+  tipButtons.append(details, nextTip);
+  const weatherPrompt = el("div", undefined, "ov-tip-weather");
+  weatherPrompt.hidden = true;
+  const weatherNote = el("p");
+  const updateWeather = el("button", "Update weather", "secondary");
+  updateWeather.onclick = () => updateFarmWeather(updateWeather);
+  weatherPrompt.append(weatherNote, updateWeather);
+  tipCopy.append(tipButtons, weatherPrompt);
+
+  let activeTip,
+    tipIndex = 0,
+    tipKey;
+  function renderDashboardTip(advance = false) {
+    if (!state) return;
+    const { day, tips, needsWeather } = dashboardTips(state);
+    const { latitude, longitude, crop, crop_stage, water, sample_date } =
+      state.farm;
+    const key = JSON.stringify([
+      day,
+      latitude,
+      longitude,
+      crop,
+      crop_stage,
+      water,
+      sample_date,
+      state.forecast?.retrieved_at,
+      tips,
+    ]);
+    if (key !== tipKey) tipIndex = 0;
+    if (advance) tipIndex = (tipIndex + 1) % tips.length;
+    tipKey = key;
+    activeTip = tips[tipIndex];
+    const text = `${activeTip.title} — ${activeTip.action}`;
+    if (tipText.textContent !== text) tipText.textContent = text;
+    tipWhen.textContent = activeTip.weather
+      ? `Forecast for ${activeTip.when}`
+      : "";
+    tipWhen.hidden = !activeTip.weather;
+    nextTip.hidden = tips.length < 2;
+    details.hidden = false;
+    weatherPrompt.hidden = !needsWeather;
+    weatherNote.textContent = navigator.onLine
+      ? "Forecast needs updating."
+      : "Go online to update the forecast.";
+    updateWeather.hidden = !navigator.onLine;
+  }
+  nextTip.onclick = () => renderDashboardTip(true);
   details.onclick = () => {
-    oldOverview.open = true;
-    $("#recommendations").scrollIntoView({ behavior: "smooth" });
+    if (!activeTip) return;
+    const suggestion = activeTip;
+    const dialog = el("dialog", undefined, "ov-tip-dialog");
+    const title = el("h2", suggestion.title);
+    title.id = "ov-tip-dialog-title";
+    dialog.setAttribute("aria-labelledby", title.id);
+    dialog.append(
+      title,
+      el("p", suggestion.action),
+      el("h3", "Why this tip?"),
+      el("p", suggestion.why),
+    );
+    if (suggestion.when) dialog.append(el("p", `When: ${suggestion.when}`));
+    if (suggestion.reference) {
+      const source = el("a", suggestion.reference.title);
+      source.href = suggestion.reference.url;
+      source.target = "_blank";
+      source.rel = "noreferrer";
+      dialog.append(source);
+    }
+    const close = el("button", "Close", "secondary");
+    close.onclick = () => dialog.close();
+    dialog.append(close);
+    dialog.addEventListener("close", () => dialog.remove(), { once: true });
+    document.body.append(dialog);
+    dialog.showModal();
   };
-  tipCopy.append(details);
+  function updateVisibleTip() {
+    if (!document.hidden && document.body.dataset.page === "overview")
+      renderDashboardTip();
+  }
+  setInterval(updateVisibleTip, 60000);
+  document.addEventListener("visibilitychange", updateVisibleTip);
+  document.addEventListener("farm-forecast-updated", updateVisibleTip);
+  window.addEventListener("online", updateVisibleTip);
   const tipBackdrop = ovImage("imgRectangle.svg");
   tipBackdrop.className = "ov-tip-backdrop";
   tip.append(
@@ -385,12 +469,7 @@
             state.data_labels?.history ||
             (state.climate.demo ? "Sample data" : "Historical weather")),
       );
-    const first = $("#recommendations article");
-    tipText.textContent = first
-      ? (first.querySelector("h3")?.textContent || "") +
-        " — " +
-        (first.querySelector("p")?.textContent || "")
-      : "Add your farm details and weather records to see suggested actions.";
+    renderDashboardTip();
   }
 
   const navAssets = {

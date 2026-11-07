@@ -39,3 +39,17 @@ class FarmerViewTests(unittest.TestCase):
             allow_past=True,
         )
         self.assertFalse(any("standing around roots" in a["title"] for a in actions))
+
+    def test_dashboard_routine_tips_use_the_saved_farm_without_weather(self):
+        farm = {
+            **DEFAULT_FARM,
+            "crop": "corn",
+            "crop_stage": "flowering",
+            "water": "rainfed",
+        }
+        tips = suggested_actions(farm, self.weather(), include_weather=False)
+        titles = [tip["title"] for tip in tips]
+        self.assertTrue(any("flowering corn" in title for title in titles))
+        self.assertIn("Check moisture near the roots", titles)
+        self.assertNotIn("Get the latest weather", titles)
+        self.assertFalse(any("wetter days" in title for title in titles))
