@@ -45,7 +45,44 @@ DEFAULT_FARM = {
     "ash": False,
     "soil_method": "unknown",
     "sample_date": "",
+    "ph_medium": "unknown",
+    "nitrogen_rating": "unknown",
+    "phosphorus_rating": "unknown",
+    "potassium_rating": "unknown",
+    "soil_sample_point": None,
 }
+
+
+def sample_point_for(updated, previous):
+    """Keep a report tied to its old field when only the farm coordinates change."""
+    nutrients = ("nitrogen", "phosphorus", "potassium")
+    keys = (
+        "ph",
+        *nutrients,
+        "sample_date",
+        "soil_method",
+        "ph_medium",
+        *(key + "_rating" for key in nutrients),
+    )
+    has_results = any(
+        updated.get(key) is not None for key in ("ph", *nutrients)
+    ) or any(updated.get(key + "_rating", "unknown") != "unknown" for key in nutrients)
+    if not has_results:
+        return None
+    changed = any(
+        updated.get(
+            key, "unknown" if key.endswith("_rating") or key == "ph_medium" else None
+        )
+        != previous.get(
+            key, "unknown" if key.endswith("_rating") or key == "ph_medium" else None
+        )
+        for key in keys
+    )
+    if changed:
+        return {key: updated[key] for key in ("latitude", "longitude")}
+    return previous.get("soil_sample_point") or {
+        key: previous[key] for key in ("latitude", "longitude")
+    }
 
 
 def create_app(database=None):
@@ -611,7 +648,9 @@ def create_app(database=None):
 
     @app.post("/api/profile")
     def profile():
+        previous = get("farm", DEFAULT_FARM)
         farm = validate_profile(body())
+        farm["soil_sample_point"] = sample_point_for(farm, previous)
         farm["location"] = lookup(farm["latitude"], farm["longitude"])
         put("farm", farm)
         return jsonify(farm=farm)
@@ -626,6 +665,7 @@ def create_app(database=None):
                 "SELECT value FROM state WHERE key=?", ("farm",)
             ).fetchone()
             farm = json.loads(row["value"]) if row else DEFAULT_FARM
+            previous = farm
             farm = validate_profile(
                 {
                     **farm,
@@ -640,6 +680,7 @@ def create_app(database=None):
                 }
             )
             farm["location"] = location
+            farm["soil_sample_point"] = sample_point_for(farm, previous)
             conn.execute(
                 "INSERT INTO state VALUES (?,?) ON CONFLICT(key) DO UPDATE SET value=excluded.value",
                 ("farm", json.dumps(farm)),
@@ -1142,6 +1183,9 @@ def create_app(database=None):
                                 else {field: pending["value"]}
                             )
                             updated = validate_profile({**current_farm, **edits})
+                            updated["soil_sample_point"] = sample_point_for(
+                                updated, current_farm
+                            )
                             updated["location"] = current_farm.get("location")
                             write_saved("farm", updated)
                         write_saved(key, None)
@@ -1180,6 +1224,10 @@ def create_app(database=None):
                         "soil_method",
                         "ash",
                         "planting_date",
+                        "ph_medium",
+                        "nitrogen_rating",
+                        "phosphorus_rating",
+                        "potassium_rating",
                     )
                 },
                 "pending": (

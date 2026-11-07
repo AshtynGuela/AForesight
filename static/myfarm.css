@@ -440,6 +440,103 @@ body[data-page="farm"] #offline:not([hidden]) {
   font-size: 25px;
   color: #617654;
 }
+#farm .mf-condition-ring {
+  border: 0;
+  position: relative;
+  isolation: isolate;
+  font-size: 25px;
+  font-weight: 700;
+}
+#farm .mf-condition-ring::before {
+  content: "";
+  position: absolute;
+  inset: 20px;
+  border-radius: 50%;
+  background: #f4f4f4;
+  z-index: -1;
+}
+#farm .mf-condition-checks {
+  display: grid;
+  gap: 8px;
+  margin: 12px 0;
+}
+#farm .mf-assessment-draft {
+  font-size: 11px;
+  line-height: 1.5;
+  color: #645837;
+  background: #f4e8d4;
+  padding: 10px;
+  border-radius: 12px;
+}
+#farm .mf-condition-check {
+  display: grid;
+  grid-template-columns: 65px 1fr;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 14px;
+  background: #e7eadf;
+  border-left: 4px solid #a6b09c;
+  font-size: 12px;
+  line-height: 1.5;
+}
+#farm .mf-condition-check[data-status="attention"] {
+  border-color: #b77627;
+  background: #f4e8d4;
+}
+#farm .mf-condition-check[data-status="okay"] {
+  border-color: #527b49;
+}
+#farm .mf-assessment-explanation {
+  margin: 12px 0 18px;
+}
+#farm .mf-assessment-explanation summary {
+  font-size: 12px;
+  min-height: 36px;
+  line-height: 1.6;
+}
+#farm .mf-assessment-explanation p,
+#farm .mf-assessment-explanation a {
+  font-size: 11px;
+  line-height: 1.6;
+}
+#farm .mf-assessment-explanation a {
+  display: block;
+  margin-bottom: 8px;
+}
+#farm .mf-assessment-explanation section {
+  padding: 12px 0;
+  border-top: 1px solid #d9dfd3;
+}
+#farm .mf-performance-empty small {
+  font-size: 10px;
+  color: #555;
+}
+#farm .mf-farm-card.mf-editing {
+  outline: 2px solid #627d4a;
+  outline-offset: 3px;
+}
+#farm .mf-edit-hint {
+  font-size: 11px;
+  margin: 14px 0 0;
+  color: #405438;
+}
+#farm .mf-town-edit {
+  font-size: 11px;
+  margin: 12px 0;
+}
+#farm .mf-town-edit input {
+  font-size: 14px;
+  background: #f4f4f4;
+  border-radius: 12px;
+}
+#farm .leaflet-control-layers:not(.leaflet-control-layers-expanded) {
+  background: transparent;
+  border: 0;
+  box-shadow: none;
+}
+#farm .leaflet-control-layers-toggle {
+  background-color: transparent;
+}
 #farm .mf-performance-empty strong {
   font-size: 14px;
 }

@@ -187,6 +187,8 @@ crop and previous_crop (rice/corn/mungbean/sweet potato; previous_crop can be un
 crop_stage (unknown/preparation/establishment/vegetative/flowering/maturity/harvest),
 planting_date and sample_date (YYYY-MM-DD, never future), soil_method (unknown/lab/sensor/field kit),
 ph and previous_ph (0-14), nitrogen/phosphorus/potassium (mg/kg), ash (boolean).
+nitrogen_rating/phosphorus_rating/potassium_rating (unknown/low/medium/high) are categories copied from a lab or soil test kit, never inferred from mg/kg.
+ph_medium (unknown/water/cacl2) describes the pH test medium stated on the report.
 Missing soil readings may be null. Never guess units: ask whether area is hectares or square metres
 when unspecified, and ask for NPK units before saving. Convert square metres to hectares by dividing
 by 10000 when explicitly supplied. Relative dates use today's date in context. Ask about ambiguous dates.

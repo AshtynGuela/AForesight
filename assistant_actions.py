@@ -20,6 +20,10 @@ EDITABLE = {
     "sample_date": "Soil sample date",
     "soil_method": "Soil measurement method",
     "ash": "Ash observed",
+    "nitrogen_rating": "Reported nitrogen category",
+    "phosphorus_rating": "Reported phosphorus category",
+    "potassium_rating": "Reported potassium category",
+    "ph_medium": "pH test medium",
 }
 
 

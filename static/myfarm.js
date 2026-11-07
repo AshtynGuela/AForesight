@@ -15,12 +15,6 @@
     control.onclick = action;
     return control;
   };
-  const openDetails = (field) => {
-    more.open = true;
-    const input = fields.namedItem(field);
-    input.scrollIntoView({ behavior: "smooth", block: "center" });
-    input.focus({ preventScroll: true });
-  };
   page
     .querySelectorAll(":scope > .eyebrow,:scope > h1,:scope > .lead")
     .forEach((node) => node.remove());
@@ -173,11 +167,19 @@
   nameLabel.append(fields.name);
   farmHeading.append(
     nameLabel,
-    button("Edit details", () => openDetails("municipality"), "mf-more-button"),
+    button(
+      "Edit details",
+      () => setFarmEditing(!farmCard.classList.contains("mf-editing")),
+      "mf-more-button",
+    ),
   );
   farmCard.append(farmHeading);
   const town = el("p", undefined, "mf-town");
   farmCard.append(town);
+  const municipalityLabel = fields.municipality.closest("label");
+  municipalityLabel.className = "mf-town-edit";
+  municipalityLabel.hidden = true;
+  farmCard.append(municipalityLabel);
   const farmGrid = el("div", undefined, "mf-farm-grid");
   for (const [name, label] of [
     ["area", "Total area (hectares)"],
@@ -190,20 +192,66 @@
     farmGrid.append(wrapper);
   }
   farmCard.append(farmGrid);
+  const editHint = el(
+    "p",
+    "Edit these fields here, then choose Save my farm below.",
+    "mf-edit-hint",
+  );
+  editHint.hidden = true;
+  farmCard.append(editHint);
+  function setFarmEditing(editing) {
+    farmCard.classList.toggle("mf-editing", editing);
+    editHint.hidden = !editing;
+    municipalityLabel.hidden = !editing;
+    farmHeading.querySelector("button").textContent = editing
+      ? "Close editing"
+      : "Edit details";
+    if (editing) {
+      fields.name.focus({ preventScroll: true });
+      fields.name.select();
+    }
+  }
 
   const performance = el("section", undefined, "mf-performance");
-  performance.append(el("h2", "Farm Performance"), el("small", "Your records"));
-  const empty = el("div", undefined, "mf-performance-empty");
-  empty.append(
-    el("span", "—", "mf-empty-ring"),
-    el("strong", "No performance score yet"),
-    el(
-      "p",
-      "Keep field notes and record harvest outcomes to build your farm history.",
-    ),
+  performance.append(
+    el("h2", "Farm Performance"),
+    el("small", "Your farm condition check"),
   );
+  const empty = el("div", undefined, "mf-performance-empty");
+  const conditionRing = el("span", "—", "mf-empty-ring mf-condition-ring");
+  conditionRing.setAttribute("role", "img");
+  const performanceTitle = el("strong", "Not enough data");
+  const performanceAction = el(
+    "p",
+    "Add farm readings to get a condition check.",
+  );
+  const coverageLabel = el("small", "Checks with usable data");
+  empty.append(
+    conditionRing,
+    coverageLabel,
+    performanceTitle,
+    performanceAction,
+  );
+  const conditionChecks = el("div", undefined, "mf-condition-checks");
+  const assessmentDraft = el(
+    "p",
+    "This check uses saved farm details. Save your edits to update it.",
+    "mf-assessment-draft",
+  );
+  assessmentDraft.hidden = true;
+  const conditionExplanation = el(
+    "details",
+    undefined,
+    "mf-assessment-explanation",
+  );
+  conditionExplanation.append(el("summary", "Why this check?"));
+  const explanationBody = el("div");
+  conditionExplanation.append(explanationBody);
   performance.append(
     empty,
+    assessmentDraft,
+    conditionChecks,
+    conditionExplanation,
     button("Open field journal", () => tab("journal"), "secondary"),
   );
 
@@ -232,7 +280,7 @@
   );
   weatherCard.append(sampleButton);
   const more = el("details", undefined, "mf-more");
-  more.append(el("summary", "More details"));
+  more.append(el("summary", "More Details (Close this to view the map)"));
   const detailsIntro = el(
     "p",
     "Add what you know. You can leave optional readings blank.",
@@ -247,18 +295,50 @@
     group.append(grid);
     more.append(group);
   };
-  detailGroup("Crop details", [
-    "municipality",
-    "previous_crop",
-    "crop_stage",
-    "planting_date",
-  ]);
+  detailGroup("Crop details", ["previous_crop", "crop_stage", "planting_date"]);
   detailGroup("Soil sample", [
     "sample_date",
     "soil_method",
     "previous_ph",
     "ash",
   ]);
+  const reportGroup = el("section", undefined, "mf-detail-group");
+  reportGroup.append(
+    el("h2", "What does the soil report say?"),
+    el(
+      "p",
+      "Copy the lab or test-kit categories. Leave them unknown if your report only gives numbers.",
+    ),
+  );
+  const reportGrid = el("div", undefined, "mf-detail-grid");
+  for (const [key, label] of [
+    ["nitrogen_rating", "Nitrogen category"],
+    ["phosphorus_rating", "Phosphorus category"],
+    ["potassium_rating", "Potassium category"],
+    ["ph_medium", "pH test medium"],
+  ]) {
+    const wrapper = el("label", label),
+      select = el("select");
+    select.name = key;
+    const options =
+      key === "ph_medium"
+        ? [
+            ["unknown", "Not sure"],
+            ["water", "Water-based test"],
+            ["cacl2", "Calcium chloride (CaCl₂)"],
+          ]
+        : [
+            ["unknown", "Not reported"],
+            ["low", "Low"],
+            ["medium", "Medium"],
+            ["high", "High"],
+          ];
+    for (const [value, text] of options) select.append(new Option(text, value));
+    wrapper.append(select);
+    reportGrid.append(wrapper);
+  }
+  reportGroup.append(reportGrid);
+  more.append(reportGroup);
   const coordinateEditor = el("section", undefined, "mf-coordinate-editor");
   coordinateEditor.hidden = true;
   coordinateEditor.append(el("h2", "Enter coordinates"));
@@ -309,6 +389,7 @@
     "invalid",
     (event) => {
       if (more.contains(event.target)) more.open = true;
+      if (farmCard.contains(event.target)) setFarmEditing(true);
     },
     true,
   );
@@ -678,6 +759,7 @@
   };
 
   function showConditions(conditions, warning = "") {
+    renderFarmAssessment();
     conditionValues.replaceChildren();
     for (const [name, label, unit] of [
       ["temperature", "Temperature", "°C"],
@@ -860,6 +942,59 @@
     if (map && state)
       map.setView([state.farm.latitude, state.farm.longitude], 17);
   }
+  function renderFarmAssessment() {
+    if (!state) return;
+    assessmentDraft.hidden = !farmDirty;
+    const result = assessFarm(state);
+    const colors = {
+      okay: "#527b49",
+      attention: "#b77627",
+      unknown: "#d7e4cf",
+    };
+    const segments = result.checks.map(
+      (item, index) =>
+        `${colors[item.status]} ${index * 120}deg ${index * 120 + 115}deg, #f4f4f4 ${index * 120 + 115}deg ${(index + 1) * 120}deg`,
+    );
+    conditionRing.style.background = `conic-gradient(${segments.join(",")})`;
+    conditionRing.textContent = result.ready + "/3";
+    conditionRing.setAttribute(
+      "aria-label",
+      result.ready +
+        " of 3 checks have usable data. " +
+        result.title +
+        ". This is not a health score.",
+    );
+    coverageLabel.textContent = result.ready + " of 3 checks have usable data";
+    performanceTitle.textContent = result.title;
+    performanceAction.textContent = result.action;
+    performance.dataset.status = result.status;
+    conditionChecks.replaceChildren();
+    explanationBody.replaceChildren(
+      el("p", result.note),
+      el("p", "The ring counts available checks, not how healthy the farm is."),
+    );
+    for (const item of result.checks) {
+      const row = el("div", undefined, "mf-condition-check");
+      row.dataset.status = item.status;
+      row.append(el("strong", item.label), el("span", item.title));
+      conditionChecks.append(row);
+      const section = el("section");
+      section.append(
+        el("strong", item.label),
+        el("p", item.detail),
+        creditLink(item.source.title, item.source.url),
+      );
+      if (item.guide)
+        section.append(creditLink(item.guide.title, item.guide.url));
+      explanationBody.append(section);
+    }
+    explanationBody.append(
+      el(
+        "p",
+        "Prototype review settings: soil samples up to 180 days old; forecasts up to 48 hours old; current estimates up to 6 hours old. Flags use ≥35 °C, ≥50 mm/day, or 3 consecutive forecast days below 1 mm, or rain below reference ET₀ on rainfed farms. These are screening rules, not official warnings or fertilizer rates.",
+      ),
+    );
+  }
   function renderMyFarm() {
     if (!state) return;
     syncAssistantLauncher();
@@ -898,6 +1033,8 @@
     draftStatus.textContent = farmDirty
       ? "Changes waiting to be saved"
       : "Saved farm details";
+    if (!farmDirty && farmCard.classList.contains("mf-editing"))
+      setFarmEditing(false);
     const pointKey = farm.latitude + ":" + farm.longitude;
     if (conditionsPointKey !== pointKey) {
       conditionsPointKey = pointKey;
@@ -943,8 +1080,10 @@
     }
   }
   form.addEventListener("input", (event) => {
-    if (event.target.name)
+    if (event.target.name) {
       draftStatus.textContent = "Changes waiting to be saved";
+      renderFarmAssessment();
+    }
   });
   registerPageView("farm", renderMyFarm);
 })();

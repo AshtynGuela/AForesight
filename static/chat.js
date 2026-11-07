@@ -48,6 +48,10 @@ async function loadChatModels() {
 }
 loadChatModels();
 const chatEditableFields = new Set([
+  "nitrogen_rating",
+  "phosphorus_rating",
+  "potassium_rating",
+  "ph_medium",
   "name",
   "area",
   "terrain",

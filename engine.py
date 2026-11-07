@@ -106,6 +106,15 @@ def validate_profile(data):
             raise ValueError(
                 "Soil sample date must be a valid date in the past or today."
             )
+    for nutrient in ("nitrogen", "phosphorus", "potassium"):
+        key = nutrient + "_rating"
+        rating = data.get(key, "unknown")
+        if rating not in ("unknown", "low", "medium", "high"):
+            raise ValueError(f"Invalid {nutrient} test category.")
+        result[key] = rating
+    result["ph_medium"] = data.get("ph_medium", "unknown")
+    if result["ph_medium"] not in ("unknown", "water", "cacl2"):
+        raise ValueError("Choose the pH test medium from the soil report.")
     return result
 
 
