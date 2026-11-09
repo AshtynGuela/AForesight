@@ -1104,3 +1104,191 @@ footer {
 .chat-model-picker select {
   margin-top: 5px;
 }
+
+/* Simple motion only: soft entrances and press/hover feedback. */
+html {
+  scroll-behavior: smooth;
+}
+
+@keyframes page-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes card-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes bubble-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes panel-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.page:not([hidden]) {
+  animation: page-in 0.3s ease both;
+}
+
+.stats article,
+.cards article,
+.panel {
+  animation: card-in 0.35s ease both;
+}
+
+.stats article:nth-child(2),
+.cards article:nth-child(2) {
+  animation-delay: 0.05s;
+}
+
+.stats article:nth-child(3),
+.cards article:nth-child(3) {
+  animation-delay: 0.1s;
+}
+
+button {
+  transition:
+    transform 0.15s ease,
+    filter 0.15s ease,
+    background-color 0.15s ease,
+    box-shadow 0.15s ease;
+}
+
+button:not(:disabled):hover {
+  transform: translateY(-1px);
+}
+
+button:not(:disabled):active {
+  transform: translateY(0) scale(0.97);
+}
+
+nav button:not(:disabled):hover {
+  transform: translateX(3px);
+}
+
+.stats article,
+.cards article {
+  transition:
+    transform 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+.stats article:hover,
+.cards article:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 6px 18px #23442c14;
+}
+
+input,
+select,
+textarea {
+  transition:
+    border-color 0.15s ease,
+    box-shadow 0.15s ease;
+}
+
+input:focus,
+select:focus,
+textarea:focus {
+  box-shadow: 0 0 0 3px #97b98533;
+}
+
+.chat-bubble {
+  animation: bubble-in 0.25s ease both;
+}
+
+.assistant-panel:not([hidden]) {
+  animation: panel-in 0.25s ease both;
+}
+
+.assistant-launcher {
+  transition:
+    transform 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+.assistant-launcher:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 28px #20352b40;
+}
+
+#forecasts .fc-day,
+.weather-day {
+  animation: card-in 0.35s ease both;
+}
+
+#forecasts .fc-day:nth-child(2),
+.weather-day:nth-child(2) {
+  animation-delay: 0.05s;
+}
+
+#forecasts .fc-day:nth-child(3),
+.weather-day:nth-child(3) {
+  animation-delay: 0.1s;
+}
+
+#forecasts .fc-day:nth-child(4),
+.weather-day:nth-child(4) {
+  animation-delay: 0.15s;
+}
+
+#forecasts .fc-day:nth-child(5),
+.weather-day:nth-child(5) {
+  animation-delay: 0.2s;
+}
+
+#forecasts .fc-day:nth-child(6),
+.weather-day:nth-child(6) {
+  animation-delay: 0.25s;
+}
+
+#forecasts .fc-day:nth-child(7),
+.weather-day:nth-child(7) {
+  animation-delay: 0.3s;
+}
+
+#notice:not(:empty) {
+  animation: card-in 0.25s ease both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001s !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001s !important;
+  }
+}

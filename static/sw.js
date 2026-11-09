@@ -1,4 +1,4 @@
-const CACHE = "agriforesight-shell-v52-methods-layout";
+const CACHE = "agriforesight-shell-v53-animations";
 const FILES = [
   "/static/methods-assets/rice-field.png",
   "/static/methods-assets/references.svg",
